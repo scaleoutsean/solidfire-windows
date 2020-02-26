@@ -95,11 +95,31 @@ For additional SolidFire information, please refer to (Awesome SolidFire](github
 
 ## Microsoft Windows NetApp HCI Hardware
 
+### NetApp H410C
+
 - There are no "official" drivers and firmware for Microsoft Windows, so we can use latest & greatest vendor-released drivers and firmware
 - Drivers (example) for NetApp H410C
   - Intel C620 chpiset driver ([v10.1.17903.8106](https://downloadcenter.intel.com/download/28531/Intel-Server-Chipset-Driver-for-Windows-))
   - Mellanox ConnectX-4 Lx NIC driver ([v2.30.51000](https://www.mellanox.com/products/adapter-software/ethernet/windows/winof-2)
   - Intel X550 NIC driver ([v25.0](https://downloadcenter.intel.com/download/28396/Intel-Network-Adapter-Driver-for-Windows-Server-2019-?product=88207)
+
+#### Network adapter layout on the H410C
+
+- SIOM Port 1 & 2 are 1/10 GigE Intel X550 (RJ-45)
+- The rest are Mellanox Connect-4 Lx with SFP28 (2 dual-ported NICs)
+  - Starting from left, there are 6 ports that may be used, A to F (see the HCI Port column)
+- IPMI (RJ-45) is not shown
+
+```
+| PCI | NIC  | Bus | Device | Func | HCI Port | Default OS Name   | Description (numeric suffix varies)        |
+|-----|------|-----|--------|------|----------|-------------------|--------------------------------------------|
+| 6   |  x   | 24  | 0      | 0    | A        | SIOM Port 1       | Intel(R) Ethernet Controller X550          |
+| 6   |  x   | 24  | 0      | 1    | B        | SIOM Port 2       | Intel(R) Ethernet Controller X550          |
+| 7   | NIC1 | 25  | 0      | 0    | C        | Ethernet 1        | Mellanox ConnectX-4 Lx Ethernet Adapter    |
+| 7   | NIC1 | 25  | 0      | 1    | D        | Ethernet 2        | Mellanox ConnectX-4 Lx Ethernet Adapter    |
+| 1   | NIC2 | 59  | 0      | 1    | E        | CPU1 Slot1 Port 1 | Mellanox ConnectX-4 Lx Ethernet Adapter    |
+| 1   | NIC2 | 59  | 0      | 0    | F        | CPU1 Slot1 Port 2 | Mellanox ConnectX-4 Lx Ethernet Adapter    |
+```
 
 ## Demo Videos
 
