@@ -1,6 +1,6 @@
 # solidfire-windows: Notes on Microsoft Windows with NetApp SolidFire
 
-Notes on Windows Server Hyper-V clusters with NetApp SolidFire, including (but not limited to) NeApp HCI H410C (servers)) and Mellanox SN2010 switches.
+Notes on Windows Server Hyper-V clusters with NetApp SolidFire, including (but not limited to) NeApp HCI H410C (servers) and Mellanox SN2010 switches.
 
 For additional SolidFire information, please refer to (Awesome SolidFire](github.com/scaleoutsean/awesome-solidfire).
 
@@ -24,6 +24,7 @@ For additional SolidFire information, please refer to (Awesome SolidFire](github
   - Consider disabling NIC registration in DNS for interfaces on iSCSI network
   - Consider disabling DHCP service on iSCSI and Live Migration network(s)
   - It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, and use Trunk mode and VLANs to segregate workloads
+  - It looks like it's not easy to create workloads for which networking needs special tuning
 - iSCSI
   - Increase the maximum duration of timeouts and lower the frequency of checks (not sure how much it matters)
 - Multipath I/O
@@ -32,8 +33,8 @@ For additional SolidFire information, please refer to (Awesome SolidFire](github
 - Disks
   - Maximum SolidFire volume size is 16TB
   - In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability Windows)
-  - Another way to spread the workload is to put VM data on several disks, each placed on a different (Cluster Shared or other) SolidFire volume. This assumes it's not just one hot database table or file.
-  - (Default) NTFS 4kB block size ought to perform best in terms of efficiency, but there is no recent anectodal evidence so further investigation is needed
+  - Another way to spread the workload is to put VM data on several disks, each placed on a different (Cluster Shared or other) SolidFire volume. This assumes it's not just one hot database table or file
+  - The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no recent anectodal evidence so further investigation is needed
 - Hyper-V
   - Note that Virtual Switches configured through the GUI have certain default values not immediately obvious to the user
   - Once you create up Virtual Switches, re-check IPv6, NIC binding order, and packet sizes on vEthernet NICs
@@ -42,8 +43,8 @@ For additional SolidFire information, please refer to (Awesome SolidFire](github
   - Deploy SolidFire PowerShell Tools for Windows - it is recommended to use SolidFire PowerShell Tools for PowerShell 5.1: `Install-Module -Name SolidFire  -Scope CurrentUser`
   - SolidFire VSS Provider for Windows Server 2019 and 2016
   - SolidFire is easy to automate (`New-SFVolume`, `Add-SFVolumeToVolumeAccessGroup`, after you've set up cluster, added iSCSI initiators and created QoS policies and Volume Access Groups)
-- Direct Access to iSCSI
-  - Like with VMware, you need to make sure VMs can get on iSCSI network, and they must use unique (to each VM or clustered group) VAGs or SolidFire (CHAP) accounts
+- Direct VM Access to iSCSI
+  - Like with VMware "RDM", you need to make sure the VMs may access iSCSI network(s), and they must use unique (to each VM or clustered group of VMs) initiators, VAGs, SolidFire (CHAP) accounts and volumes
 
 ## Generic workflow for Hyper-V Clusters with SolidFire
 
@@ -80,15 +81,15 @@ For additional SolidFire information, please refer to (Awesome SolidFire](github
   - Recheck adapter binding, IPv6, DNS, as it may be messed up after Viritual Switch configuration
 - Create Windows Failover-Cluster
   - Validate configuration, especially DNS and firewall configuration
-  - [Optional](https://social.technet.microsoft.com/Forums/en-US/bf5285bc-fc72-474f-a0f4-232a2bd230b1/smb-signing-breaks-csv-access-crossnode?forum=winserverClustering) Disable SMB signing/encryption
+  - [Optionally](https://social.technet.microsoft.com/Forums/en-US/bf5285bc-fc72-474f-a0f4-232a2bd230b1/smb-signing-breaks-csv-access-crossnode?forum=winserverClustering) disable SMB signing/encryption
   - Create Failover Cluster
     - If you use Failover Cluster to protect VMs, that becomes default location (Hyper-V Manager is no longer used)
   - Add quorum disk to cluster
 - Deploy Cluster Shared Volumes
   - On all Windows hosts, login to SolidFire volumes meant for data
-  - One one Windows host, bring those volumes online and format them
-  - In Failover Cluster (assuming you use it to provide HA to VMs), add new disk(s) and convert them to Cluster Shared Volumes
-  - When deploying VMs, select CSVs or change Hyper-V defaults
+  - On one Windows host, bring those volumes online and format them
+  - In Failover Cluster GUI (assuming you use it to provide HA to VMs), add new cluster disk(s) and convert them to Cluster Shared Volumes
+  - When deploying VMs, place them on a CSV or change Hyper-V defaults
 - [Optional] Install (out-of-band) SolidFire Management VM on cluster shared storage
 - [Optional] Install and configure NetApp OneCollect for period gathering of sytem events and configuration changes
 
@@ -113,4 +114,4 @@ A: No. While some of this may be correct, please refer to the official documenta
 ## License and Trademarks
 
 - NetApp, SolidFire and other marks are owned by NetApp, Inc. Other marks may be owned by their respective owners.
-- See LICENSE](LICENSE).
+- See [LICENSE](LICENSE).
