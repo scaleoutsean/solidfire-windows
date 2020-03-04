@@ -28,12 +28,12 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 ## General Notes
 
 - Each SolidFire volume is available on one network (subnet and VLAN). Different targets may be served over multiple networks and VLANs when SolidFire uses Trunk Mode switch ports.
-  - iSCSI clients connect to portal - Storage Virtual IP (SVIP) - which redirects each login to the SolidFire node which hosts the target (volume) of interest (standard iSCSI redirection)
-  - Active nodes are ocassionally rebalanced transparently to the client
-- Multiple connections from one host to single volume (and MPIO) are rarely needed (NetApp AFF and E-Series are more suitable one or few large workloads)
+  - iSCSI clients connect to SolidFire portal - Storage Virtual IP (SVIP) - which redirects each to the SolidFire node which hosts the target (volume) of interest (iSCSI login redirection is described in [RFC-3720](https://tools.ietf.org/html/rfc3720))
+  - Volumes are ocassionally rebalanced, transparently to the client
+- Multiple connections from one iSCSI client to single volume (with or without MPIO) are rarely needed (NetApp AFF and E-Series are more suitable one or few large workloads)
   - Network adapter team (bonding) creates one path per volume and provides link redundancy, which is enough for 90% of use cases
-  - It is not possible to establish two connections (sessions) to the same volume with one initiator IP
-  - Ways to get to multiple connections requires Multipath I/O and:
+  - It is not possible to establish two connections (sessions) to the same volume with only one initiator IP
+  - Thre are several ways to create two iSCSI connections to a SolidFire target. They require Multipath I/O and one of the following (not a complete list):
     - Use four NICs to create two teams on the same network, set up one connection from each adapter team's IP address
     - Use two non-teamed NICs on the same network, set up one connection from each interface's IP address
     - Use one teamed interface with two vEthernet NICs for ManagementOS, set up one connection from each vEthernet interface's IP address
@@ -54,18 +54,18 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### iSCSI
 
-- (Optional) Increase the maximum duration of I/O timeouts and lower the frequency of accessibility checks (not sure how much it matters)
+- (Optional) Increase the maximum duration of I/O timeouts and lower the frequency of accessibility checks (not sure how much it matters - likely not unless the cluster is very busy)
 
 ### Multipath I/O
 
-- If you don't have multiple links to SolidFire or other iSCSI target, don't install it
-- When adding vendor and product ID to MPIO configuration, use `SolidFir` and `SSD SAN`, respectively (only recommended if you use Multipath I/O)
-- There are no recent comparisons of various Multipath load balancing options (LQD should give best results), so it's recommended to spend 30 minutes to evaluate them in your environment
+- If you don't have multiple links to SolidFire or other iSCSI target, you don't need it (one less thing to install and configure)
+- When adding vendor and product ID to MPIO configuration, use `SolidFir` and `SSD SAN`, respectively (only recommended if you use Multipath-IO)
+- There are no recent comparisons of various Multipath load balancing options (LQD should give best results in terms of performance), so if you're curious you can spend 30 minutes to evaluate them in your environment
 
 ### Disks
 
-- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one should create N*2 to N*4 volumes of 1-4 TB each
-- Maximum SolidFire volume performance depends on request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
+- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one should create N x 2 to N x 4 volumes of 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
+- Maximum SolidFire volume performance depends on I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
 - In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore)
 - Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if worklaod isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
 - The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no anectodal evidence so this should be confirmed in practice through testing
@@ -77,6 +77,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 - Once you create Virtual Switches, re-check IPv6 addresses (best eliminate them), adapter binding order and packet sizes on vEthernet NICs (including ManagementOS)
 - Re-check Hyper-V Live Migration settings - make sure iSCSI and Management networks have lowest preference for Live Migration
 - You may want to verify SMB3 if you set Hyper-V to use it for Live Migration
+- If you have only [Gen 2](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/plan/should-i-create-a-generation-1-or-2-virtual-machine-in-hyper-v) VMs, you may create SolidFire volumes with 4kB rather than emulated 512b sectors (`-Enable512e:$False`). Potentially consolidate Gen 1 VMs on a handful of dedicated volumes with 512 byte emulation
   
 ### Automation
 
@@ -202,7 +203,8 @@ NetApp has published several TR's (Technical Reports) for Windows-based workload
 
 ## Demo Videos
 
-- [Cluster Shared Volumes](https://youtu.be/GL9S6GkP-Z8) (Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet)
+- [Hyper-V (Windows Server 2019) and Cluster Shared Volumes](https://youtu.be/GL9S6GkP-Z8) - Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet. Hyper-V uses single NIC for iSCSI, but the SQL Server 2019 demo video (below) uses Multipath-IO
+- [SQL Server 2019 VM on Hyper-V](https://youtu.be/9VR0B393Qe4) - showcases Multipath-IO inside of SQL Server VM directly accessing SolidFire iSCSI volumes and Live Migration using Mellanox-4 Lx and Mellanox SN2010 switches
 
 ## Frequently Asked Questions
 
