@@ -182,12 +182,12 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 ### Create and Remove Volume
 
 - `New-SFVolume` (pay special attention to volume naming, because in SolidFire you can have duplicate volume names; VolumeID's would be different, of course)
-- Do a iSCSI target rescan and login to new target on all Hyper-V servers (you may want to use `-IsPersistent:$True`)
-- One one host, online the disk, intialize and create a filesystem (NTFS seems like the best choice for SolidFire environments)
+- Perform iSCSI target rescan, login to new target on all Hyper-V servers (you may want to use `-IsPersistent:$True`)
+- On one host, bring the new disk online, intialize it and create a filesystem (NTFS seems like best choice for SolidFire environments and use cases)
 - Add the disk to Hyper-V cluster
 - Optionally, convert the cluster disk to CSV
 - Optionally, rename new CSV
-- Removal would go in reverse, with VM removal or migration prior to disk being reoved from Hyper-V, reset and ultimately deleted from SolidFire
+- Removal would work in reverse; remove or migrate VMs prior to disk being reoved from Hyper-V, reset and ultimately deleted from SolidFire
 
 ### Storage Snapshots
 
@@ -198,31 +198,38 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 ### Storage Clones
 
 - Clones have to be created from existing volumes or snapshots, which is asynchronous operation, few of which can run in parallel (`New-SFClone`)
-- Like on other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from clones and resignature (assign a different Volume ID) to clones, and then re-assign the volume to Hyper-V or other place from which it was cloned
+- Like on other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from clones and resignature (assign a different Volume ID) to clones, and then use SolidFire API or GUI to re-assign the volume to the Hyper-V VAG (or other host)
 - Note that it is possible to "resync" one volume to another, so if you need to update a large cloned volume that differs by just a couple of GB, check out `Copy-SFVolume`
 - As mentioned above, have clear naming rules to avoid confusion due to duplicate volume names
 
-### Volume Resize
+### Volume Grow
 
 - Resize a volume on SolidFire (up to 16 TiB) using `Set-SFVolume` or the UI and then resize the volume and filesystem on the iSCSI client (I haven't tried with CSV)
+- Volume shrink; if you want to shrink a volume create a new one, move VMs to it and then remove the large volume; as data would be physically copied from one volume to another, mind the copy workload if large amounts of VMs are involved. If done offline, a good approach could be to unregister a VM, use xcopy (with bandwidth throttle) to move the VMs to new volume and then register the VMs without changing VM ID
 
-### Storage-Based and Native Replication
+### Storage-Based and Native Hyper-V Replication
 
 - Synchronous and Asynchronous SolidFire replication can be set up in seconds through PowerShell
 - Hyper-V supports native replication of VMs but I haven't tested this
 
 ### Dealing with Unused Volumes
 
-- SolidFire lets you tag volumes (with owner, for example)
+- SolidFire lets you tag volumes (with owner name, for example)
 - As time goes by, you may end up with a bunch of unused volumes that seem to belong to no one, so use proper naming and tag them to be able to sort them out and create meaningful reports
 - It is also possible (15 lines of PowerShell) to identify volumes without iSCSI connections ("unused volumes")
 
+### Using SolidFire Object Attributes
+
+- Most SolidFire objects - such as Volumes and Snapshots - can have custom attributes in the form of KV pairs. NetApp Trident makes use of custom volume attributes
+- We can leverage this feature for management and reporting on Hyper-V as well (see Element API Reference Guide or awesome-solidfire repository for details on this)
+
 ## Microsoft Windows on NetApp HCI Servers ("Compute Nodes")
+
+- There are no "official" NetApp-released drivers and firmware for Microsoft Windows, so we can use latest & greatest vendor-released drivers and firmware
 
 ### NetApp H410C
 
-- There are no "official" NetApp-released drivers and firmware for Microsoft Windows, so we can use latest & greatest vendor-released drivers and firmware
-- Links to must-install drivers for Windows on NetApp H410C. The URLs link to a recent driver file for each
+- Links to must-install drivers for Windows on NetApp H410C are given below. The URLs link to a recent driver file for each (but as mentioned above, free feel to use any version that works for you)
   - Intel C620 chpiset driver ([v10.1.17903.8106](https://downloadcenter.intel.com/download/28531/Intel-Server-Chipset-Driver-for-Windows-))
   - Mellanox ConnectX-4 Lx NIC driver ([v2.30.51000](https://www.mellanox.com/products/adapter-software/ethernet/windows/winof-2))
   - Intel X550 NIC driver ([v25.0](https://downloadcenter.intel.com/download/28396/Intel-Network-Adapter-Driver-for-Windows-Server-2019-?product=88207))
@@ -262,8 +269,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### NetApp H615C
 
-- Two Mellanox Connect-4 Lx
-- IPMI (RJ-45) port is not shown
+- Two Mellanox Connect-4 Lx per server
 - NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET
 
 ## Demo Videos
