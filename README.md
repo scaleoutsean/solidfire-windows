@@ -17,6 +17,13 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
     - [Monitoring, Backup and other Integrations](#monitoring-backup-and-other-integrations)
   - [Application Notes](#application-notes)
   - [Generic workflow for Hyper-V Clusters with NetApp SolidFire](#generic-workflow-for-hyper-v-clusters-with-netapp-solidfire)
+  - [Hyper-V and Storage Administration](#hyper-v-and-storage-administration)
+    - [Windows Admin Center](#windows-admin-center)
+    - [Create and Remove Volume](#create-and-remove-volume)
+    - [Storage Snapshots](#storage-snapshots)
+    - [Storage Clones](#storage-clones)
+    - [Volume Resize](#volume-resize)
+    - [Storage and Native Replication](#storage-and-native-replication)
   - [Microsoft Windows on NetApp HCI Servers ("Compute Nodes")](#microsoft-windows-on-netapp-hci-servers-compute-nodes)
     - [NetApp H410C](#netapp-h410c)
       - [Network adapters and ports](#network-adapters-and-ports)
@@ -33,7 +40,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 - Multiple connections from one iSCSI client to single volume (with or without MPIO) are rarely needed (NetApp AFF and E-Series are more suitable one or few large workloads)
   - Network adapter team (bonding) creates one path per volume and provides link redundancy, which is enough for 90% of use cases
   - It is not possible to establish two connections (sessions) to the same volume with only one initiator IP
-  - Thre are several ways to create two iSCSI connections to a SolidFire target. They require Multipath I/O and one of the following (not a complete list):
+  - Thre are several ways to create two iSCSI connections to a SolidFire volume. They require Multipath I/O and one of the following (not a complete list):
     - Use four NICs to create two teams on the same network, set up one connection from each adapter team's IP address
     - Use two non-teamed NICs on the same network, set up one connection from each interface's IP address
     - Use one teamed interface with two vEthernet NICs for ManagementOS, set up one connection from each vEthernet interface's IP address
@@ -43,32 +50,35 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### Networking
 
-- Consider using Jumbo Frames on networks used for iSCSI, Live Migration and/or backup
-- Consider using enterprise-grade network switches such as Mellanox SN2010 (which you can purchase from NetApp)
-- Consider disabling IPv6 on interfaces on iSCSI network
-- Consider disabling NIC registration in DNS for interfaces on iSCSI network (also Live Migration and other networks which don't need it)
-- Consider disabling DHCP service on iSCSI and Live Migration network(s), but if you need it, hand out MTU 9000 or such through DHCP options
-- It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, use Trunk mode and VLANs to segregate workloads and tenants
-- Some network and other configuration changes may require Windows to be restarted although it won't prompt you
-- It appears light and moderate workloads don't require any tuning (even Jumbo Frames)
+- Use Jumbo Frames on networks used for iSCSI, Live Migration and/or backup
+- Use enterprise-grade network switches such as Mellanox SN2010 (which you can purchase from NetApp)
+- Consider disabling
+  - IPv6 on interfaces on iSCSI network(s), if you don't have other, IPv6 capable iSCSI targets in your environment
+  - NIC registration in DNS for interfaces on iSCSI network (also Live Migration and other networks which don't need it)
+  - DHCP service on iSCSI and Live Migration network(s), but if you need it, hand out MTU 9000 or such through DHCP options
+  - NETBIOS on iSCSI and Live Migration network(s)
+- It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, use Trunk Mode on network switch ports and VLANs on VMSwitch (to segregate workloads and tenants)
+- Some network and other configuration changes may require Windows to be restarted although it won't prompt you, so if some configuration changes don't take effect, either check the documentation or reboot the server to see if that helps
+- It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is reccommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
 
 ### iSCSI
 
-- (Optional) Increase the maximum duration of I/O timeouts and lower the frequency of accessibility checks (not sure how much it matters - likely not unless the cluster is very busy)
+- (Optional) Increase the maximum duration of I/O timeouts and lower the frequency of accessibility checks (not sure how much it matters - likely not unless the cluster is very busy or has hundreds of volumes)
 
 ### Multipath I/O
 
 - If you don't have multiple links to SolidFire or other iSCSI target, you don't need it (one less thing to install and configure)
 - When adding vendor and product ID to MPIO configuration, use `SolidFir` and `SSD SAN`, respectively (only recommended if you use Multipath-IO)
-- There are no recent comparisons of various Multipath load balancing options (LQD should give best results in terms of performance), so if you're curious you can spend 30 minutes to evaluate them in your environment
+- There are no recent comparisons of various Multipath load balancing options on SolidFire. LQD should give best results in terms of performance, but if you're curious you can spend 30 minutes to evaluate them in your environment with your workloads
 
 ### Disks
 
-- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one should create N x 2 to N x 4 volumes of 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
-- Maximum SolidFire volume performance depends on I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
-- In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore)
-- Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if worklaod isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
-- The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no anectodal evidence so this should be confirmed in practice through testing
+- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one could create N x 2 to N x 4 volumes, 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
+- SolidFire supports 512e (and defaults to 512e) but newer Hyper-V environments and VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
+- Maximum SolidFire volume performance depends on the I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
+- In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore). Don't unnecessarily complicate things
+- Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if the workload isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
+- The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no anectodal evidence so this should be confirmed in practice through testing. There are various practices for SQL Server (based on type of SQL data (DB, log, etc.) and use case (OLTP, OLAP, etc) so you can split such workloads across disks with different properties
 - Windows Storage Spaces aren't supported with iSCSI (they can be configured and work similarly to striped Dynamic Volumes, although with Storage Spaces strips are wider)
 
 ### Hyper-V
@@ -97,7 +107,9 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ## Application Notes
 
-NetApp has published several TR's (Technical Reports) for Windows-based workloads. If you google it you may find more or less recent TR's that may help you.
+- NetApp has published several TR's (Technical Reports) for Windows-based workloads. If you google it you may find more or less recent TR's that may help you
+- There are various best practices for SQL Server, but that is a topic in itself. You may split such workloads across disks with different properties
+- High Availability: consider storing VM OS disks on CSVs but store data on directly accessed SolidFire iSCSI volumes (which requires slightly more account management on SolidFire as you'd have one account or one Volume Access Group per such HA application, so you may put "light" HA apps on CSVs and rely on VM failover, to find a good balance between manageability, availability and performance)
 
 ## Generic workflow for Hyper-V Clusters with NetApp SolidFire
 
@@ -152,6 +164,52 @@ NetApp has published several TR's (Technical Reports) for Windows-based workload
 - [Optional] Install (out-of-band) SolidFire Management VM on cluster shared storage. It can monitor SolidFire events and hardware and alert NetApp Support to problems, as well as give you actionable info via NetApp ActiveIQ analytics
 - [Optional] Install and configure NetApp OneCollect for scheduled gathering of sytem events and configuration changes. It can be extremely helpful in case of technical issues with the cluster
 
+## Hyper-V and Storage Administration
+
+- Come up with a SolidFire, Windows and CSV naming rules (including for clones and remote copies, if aplicable)
+
+### Windows Admin Center
+
+- Currently there is no plugin for SolidFire, but as highlighted above, storage-side operations are fairly rare
+- At this time, a Hyper-V storage management workflow in Windows Admin Center might look like this:
+  - Prepare PowerShell scripts for operations you perform more frequently (e.g. Add, Remove, Resize, and Clone) and keep them on one or two Hyper-V hosts (or simply on Admin's network share)
+  - When one of these operations need to be perofrmed, use Admin Center to start a browser-based remote PowerShell session from a Hyper-V host, and execute the script
+  - Then navigate to other parts of Admin Center which have Web UI (view CSVs, create VMs, etc.)
+- Note that Admin Center cannot be installed on Active Directory Domain Controller so maybe a management server"
+- Cluster capacity and performance can be monitored through Admin Center dashboards
+
+### Create and Remove Volume
+
+- `New-SFVolume` (pay special attention to volume naming, because in SolidFire you can have duplicate volume names; VolumeID's would be different, of course)
+- Do a iSCSI target rescan and login to new target on all Hyper-V servers (you may want to use `-IsPersistent:$True`)
+- One one host, online the disk, intialize and create a filesystem (NTFS seems like the best choice for SolidFire environments)
+- Add the disk to Hyper-V cluster
+- Optionally, convert the cluster disk to CSV
+- Optionally, rename new CSV
+- Removal would go in reverse, with VM removal or migration prior to disk being reoved from Hyper-V, reset and ultimately deleted from SolidFire
+
+### Storage Snapshots
+
+- SolidFire VSS hardware provider is available if you need application-consistent snapshots
+- Crash consistent snapshots may be created from PowerShell (`New-SFSnapshot`) or SolidFire UI
+  - Group snapshots are available as well (`New-SFGroupSnapshot`)
+
+### Storage Clones
+
+- Clones have to be created from existing volumes or snapshots, which is asynchronous operation, few of which can run in parallel (`New-SFClone`)
+- Like on other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from clones and resignature (assign a different Volume ID) to clones, and then re-assign the volume to Hyper-V or other place from which it was cloned
+- Note that it is possible to "resync" one volume to another, so if you need to update a large cloned volume that differs by just a couple of GB, check out `Copy-SFVolume`
+- As mentioned above, have clear naming rules to avoid confusion due to duplicate volume names
+
+### Volume Resize
+
+- Resize a volume on SolidFire (up to 16 TiB) using `Set-SFVolume` or the UI and then resize the volume and filesystem on the iSCSI client (I haven't tried with CSV)
+
+### Storage and Native Replication
+
+- Synchronous and Asynchronous SolidFire replication can be set up in seconds through PowerShell
+- Hyper-V supports native replication of VMs but I haven't tested this
+
 ## Microsoft Windows on NetApp HCI Servers ("Compute Nodes")
 
 ### NetApp H410C
@@ -180,7 +238,7 @@ NetApp has published several TR's (Technical Reports) for Windows-based workload
 | 1   | NIC2 | 59  | 0      | 0    | F        | CPU1 Slot1 Port 2 | Mellanox ConnectX-4 Lx Ethernet Adapter |
 ```
 
-- NetApp HCI H410C with 6 cables and ESXi uses vSS (switch) and assigns ports as per below. With Windows Server we may configure them differently
+- NetApp HCI H410C with 6 cables and ESXi uses vSS (switch) and assigns ports as per below. With Windows Server we may configure them differently so this is just for reference purposes
 
 ```
 | HCI Port | Mode   | Purpose                       |
@@ -199,7 +257,7 @@ NetApp has published several TR's (Technical Reports) for Windows-based workload
 
 - Two Mellanox Connect-4 Lx
 - IPMI (RJ-45) port is not shown
-- NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller
+- NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET
 
 ## Demo Videos
 
