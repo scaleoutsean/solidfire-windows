@@ -170,13 +170,14 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### Windows Admin Center
 
-- Currently there is no plugin for SolidFire, but as highlighted above, storage-side operations are fairly rare
+- Currently there is no Admin Center plugin for SolidFire, but as highlighted above, frequent storage-side operations are fairly rare
+- Note that Admin Center can add Hyper-V clusters and individual servers; you may want to add a Hyper-V cluster (which adds the members as well)
 - At this time, a Hyper-V storage management workflow in Windows Admin Center might look like this:
   - Prepare PowerShell scripts for operations you perform more frequently (e.g. Add, Remove, Resize, and Clone) and keep them on one or two Hyper-V hosts (or simply on Admin's network share)
-  - When one of these operations need to be perofrmed, use Admin Center to start a browser-based remote PowerShell session from a Hyper-V host, and execute the script
-  - Then navigate to other parts of Admin Center which have Web UI (view CSVs, create VMs, etc.)
-- Note that Admin Center cannot be installed on Active Directory Domain Controller so maybe a management server"
-- Cluster capacity and performance can be monitored through Admin Center dashboards
+  - When one of these operations need to be perofrmed, use Admin Center to start a browser-based remote PowerShell session from a Hyper-V host, and execute the PowerShell script(s)
+  - Then navigate to other parts of Admin Center (view CSVs, create VMs, etc.)
+- Note that Admin Center cannot be installed on Active Directory Domain Controller so maybe find a "management workstation" that can be used for that
+- Hyper-V cluster capacity and performance can be monitored through Admin Center dashboards; if you'd like to monitor it elsewhere, consider NetApp Cloud Insights
 
 ### Create and Remove Volume
 
@@ -205,10 +206,16 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 - Resize a volume on SolidFire (up to 16 TiB) using `Set-SFVolume` or the UI and then resize the volume and filesystem on the iSCSI client (I haven't tried with CSV)
 
-### Storage and Native Replication
+### Storage-Based and Native Replication
 
 - Synchronous and Asynchronous SolidFire replication can be set up in seconds through PowerShell
 - Hyper-V supports native replication of VMs but I haven't tested this
+
+### Dealing with Unused Volumes
+
+- SolidFire lets you tag volumes (with owner, for example)
+- As time goes by, you may end up with a bunch of unused volumes that seem to belong to no one, so use proper naming and tag them to be able to sort them out and create meaningful reports
+- It is also possible (15 lines of PowerShell) to identify volumes without iSCSI connections ("unused volumes")
 
 ## Microsoft Windows on NetApp HCI Servers ("Compute Nodes")
 
@@ -263,6 +270,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 - [Hyper-V (Windows Server 2019) and Cluster Shared Volumes](https://youtu.be/GL9S6GkP-Z8) - Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet. Hyper-V uses single NIC for iSCSI, but the SQL Server 2019 demo video (below) uses Multipath-IO
 - [SQL Server 2019 VM on Hyper-V](https://youtu.be/9VR0B393Qe4) - showcases Multipath-IO inside of SQL Server VM directly accessing SolidFire iSCSI volumes and Live Migration using Mellanox-4 Lx and Mellanox SN2010 switches
+- [Use Active Directory accounts for management of SolidFire clusters](https://youtu.be/IY8ooGMSaOA)
 
 ## Frequently Asked Questions
 
