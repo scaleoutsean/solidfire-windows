@@ -19,11 +19,15 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
   - [Generic workflow for Hyper-V Clusters with NetApp SolidFire](#generic-workflow-for-hyper-v-clusters-with-netapp-solidfire)
   - [Hyper-V and Storage Administration](#hyper-v-and-storage-administration)
     - [Windows Admin Center](#windows-admin-center)
-    - [Create and Remove Volume](#create-and-remove-volume)
+    - [Create and Remove Volumes](#create-and-remove-volumes)
     - [Storage Snapshots](#storage-snapshots)
     - [Storage Clones](#storage-clones)
     - [Volume Resize](#volume-resize)
-    - [Storage and Native Replication](#storage-and-native-replication)
+    - [Rethin (Unmap) Unused Filesystem Blocks](#rethin-unmap-unused-filesystem-blocks)
+    - [Dealing with Unused Volumes](#dealing-with-unused-volumes)
+    - [Storage-Based and Native Hyper-V Replication](#storage-based-and-native-hyper-v-replication)
+    - [Switch (Failover) to SolidFire Cluster with Replica](#switch-failover-to-solidfire-cluster-with-replica)
+    - [Using SolidFire Object Attributes](#using-solidfire-object-attributes)
   - [Microsoft Windows on NetApp HCI Servers ("Compute Nodes")](#microsoft-windows-on-netapp-hci-servers-compute-nodes)
     - [NetApp H410C](#netapp-h410c)
       - [Network adapters and ports](#network-adapters-and-ports)
@@ -179,7 +183,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 - Note that Admin Center cannot be installed on Active Directory Domain Controller so maybe find a "management workstation" that can be used for that
 - Hyper-V cluster capacity and performance can be monitored through Admin Center dashboards; if you'd like to monitor it elsewhere, consider NetApp Cloud Insights
 
-### Create and Remove Volume
+### Create and Remove Volumes
 
 - `New-SFVolume` (pay special attention to volume naming, because in SolidFire you can have duplicate volume names; VolumeID's would be different, of course)
 - Perform iSCSI target rescan, login to new target on all Hyper-V servers (you may want to use `-IsPersistent:$True`)
@@ -187,13 +191,16 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 - Add the disk to Hyper-V cluster
 - Optionally, convert the cluster disk to CSV
 - Optionally, rename new CSV
-- Removal would work in reverse; remove or migrate VMs prior to disk being reoved from Hyper-V, reset and ultimately deleted from SolidFire
+- The removal would work in reverse; remove or migrate the VMs prior to disk being reoved from Hyper-V, reset and ultimately deleted on SolidFire (it can be undeleted unless it gets manually purged or naturally expires (4 hours later))
 
 ### Storage Snapshots
 
-- SolidFire VSS hardware provider is available if you need application-consistent snapshots
-- Crash consistent snapshots may be created from PowerShell (`New-SFSnapshot`) or SolidFire UI
+- SolidFire VSS Hardware Provider is available if you need application-consistent snapshots (and the docs have CLI examples on how to script it)
+- Crash consistent snapshots may be created from PowerShell (`New-SFSnapshot`) or the SolidFire UI
   - Group snapshots are available as well (`New-SFGroupSnapshot`)
+  - Demo Videos section below has a video which shows how to create a snapshot schedule in the SolidFire Web UI
+  - To create a bunch of schedules, create one in the Web UI, then `Get` it with SolidFire PowerShell tools and use it as a template to create others from PowerShell
+- Other alternatives include backup software (CommVault, Veeam, etc.) which may also leverage SolidFire VSS Hardware Provider
 
 ### Storage Clones
 
@@ -202,21 +209,34 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 - Note that it is possible to "resync" one volume to another, so if you need to update a large cloned volume that differs by just a couple of GB, check out `Copy-SFVolume`
 - As mentioned above, have clear naming rules to avoid confusion due to duplicate volume names
 
-### Volume Grow
+### Volume Resize
 
-- Resize a volume on SolidFire (up to 16 TiB) using `Set-SFVolume` or the UI and then resize the volume and filesystem on the iSCSI client (I haven't tried with CSV)
-- Volume shrink; if you want to shrink a volume create a new one, move VMs to it and then remove the large volume; as data would be physically copied from one volume to another, mind the copy workload if large amounts of VMs are involved. If done offline, a good approach could be to unregister a VM, use xcopy (with bandwidth throttle) to move the VMs to new volume and then register the VMs without changing VM ID
+- You can extend a volume on SolidFire (up to 16 TiB) using `Set-SFVolume` or the UI, and then resize the volume and filesystem on the iSCSI client (I haven't tried with CSV)
+- Volume shrink; if you want to shrink a volume create a new one, move the VMs to the new volume, and then remove the large volume; as data would be physically copied from one volume to another, mind the copy workload if large amounts of VMs are involved. If done offline, a good approach could be to unregister a VM, use xcopy (with appropriate bandwidth throttle during busy hours) to move the VMs to new volume and then register the VMs without changing VM ID
+
+### Rethin (Unmap) Unused Filesystem Blocks
+
+- Whether inside of Windows VMs or on the management OS, sdelete (on Linux, fstrim) may be used to periodically zero-out empty space
+- If you create a schedule, try to randomize run times so that you don't kick it off for a bunch of VMs at the same time
+- SolidFire reclaims unmapped capacity periodically so it may take an hour or so to notice effects of this operation
+
+### Dealing with Unused Volumes
+
+- SolidFire lets you tag volumes (using a project code or owner name, for example)
+- As time goes by, you may end up with a bunch of unused (that is, without iSCSI connections) volumes that seemingly belong to no one, so use proper naming and tag them to be able to sort them out and create meaningful reports
+- It is also possible (15 lines of PowerShell) to identify unused volumes
 
 ### Storage-Based and Native Hyper-V Replication
 
 - Synchronous and Asynchronous SolidFire replication can be set up in seconds through PowerShell
-- Hyper-V supports native replication of VMs but I haven't tested this
+  - A snapshot of a paired (replicated) volume can be tagged to follow established replication relationship
+- Hyper-V supports native replication of VMs but I haven't tested it
 
-### Dealing with Unused Volumes
+### Switch (Failover) to SolidFire Cluster with Replica
 
-- SolidFire lets you tag volumes (with owner name, for example)
-- As time goes by, you may end up with a bunch of unused volumes that seem to belong to no one, so use proper naming and tag them to be able to sort them out and create meaningful reports
-- It is also possible (15 lines of PowerShell) to identify volumes without iSCSI connections ("unused volumes")
+- Each SolidFire volume contains at least two details unique to that cluster, the cluster string and volume ID, as well as some other stuff (see in your iSCSI Intitiator Control Panel)
+- Target name of volume `ora` on Cluster `PROD` may contain strings like `abcd`, `ora` and `40` (VolumeID). Its async replica on Cluster `DR` may contain unque strings such as `wxyz`, `drora` and `2`
+- Search, replace, rescan and connect accordingly
 
 ### Using SolidFire Object Attributes
 
@@ -274,9 +294,11 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ## Demo Videos
 
+- [Use Active Directory accounts for management of SolidFire clusters](https://youtu.be/IY8ooGMSaOA)
 - [Hyper-V (Windows Server 2019) and Cluster Shared Volumes](https://youtu.be/GL9S6GkP-Z8) - Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet. Hyper-V uses single NIC for iSCSI, but the SQL Server 2019 demo video (below) uses Multipath-IO
 - [SQL Server 2019 VM on Hyper-V](https://youtu.be/9VR0B393Qe4) - showcases Multipath-IO inside of SQL Server VM directly accessing SolidFire iSCSI volumes and Live Migration using Mellanox-4 Lx and Mellanox SN2010 switches
-- [Use Active Directory accounts for management of SolidFire clusters](https://youtu.be/IY8ooGMSaOA)
+- [Create snapshot schedule](https://youtu.be/lMcStxK5EJ0) for crash-consistent SolidFire snapshots
+- [Use SolidFire Replication](https://youtu.be/2EaAycfCRvY) to replicate volumes and snapshots to a remote site (quick UI and PowerShell demo)
 
 ## Frequently Asked Questions
 
