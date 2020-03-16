@@ -2,7 +2,7 @@
 
 Notes on Windows Server Hyper-V clusters with NetApp SolidFire, including (but not limited to) NeApp HCI H410C (servers) and Mellanox SN2010 switches.
 
-For additional SolidFire information, please refer to [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire).
+For additional SolidFire-related information, please refer to [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire).
 
 - [solidfire-windows: Notes on Microsoft Windows with NetApp SolidFire](#solidfire-windows-notes-on-microsoft-windows-with-netapp-solidfire)
   - [General Notes](#general-notes)
@@ -60,10 +60,11 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
   - IPv6 on interfaces on iSCSI network(s), if you don't have other, IPv6 capable iSCSI targets in your environment
   - NIC registration in DNS for interfaces on iSCSI network (also Live Migration and other networks which don't need it)
   - DHCP service on iSCSI and Live Migration network(s), but if you need it, hand out MTU 9000 or such through DHCP options
-  - NETBIOS on iSCSI and Live Migration network(s)
+  - DNS and NETBIOS registration on iSCSI and Live Migration network(s)
 - It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, use Trunk Mode on network switch ports and VLANs on VMSwitch (to segregate workloads and tenants)
 - Some network and other configuration changes may require Windows to be restarted although it won't prompt you, so if some configuration changes don't take effect, either check the documentation or reboot the server to see if that helps
 - It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is reccommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
+- It is practically mandatory to use Trunk Mode on 10/25 GigE because in all likelihood you'll need more than one VLAN for iSCSI, backup and other purposes. Mellanox SN2010 has a variant of it, Hybrid Mode
 
 ### iSCSI
 
@@ -77,20 +78,20 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### Disks
 
-- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one could create N x 2 to N x 4 volumes, 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
-- SolidFire supports 512e (and defaults to 512e) but newer Hyper-V environments and VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
+- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one could create anywhere between N x 2 to N x 4 volumes, 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
+- SolidFire supports 512e (and as of v11.7 still defaults to 512e) but newer Hyper-V environments and VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
 - Maximum SolidFire volume performance depends on the I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
 - In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore). Don't unnecessarily complicate things
 - Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if the workload isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
 - The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no anectodal evidence so this should be confirmed in practice through testing. There are various practices for SQL Server (based on type of SQL data (DB, log, etc.) and use case (OLTP, OLAP, etc) so you can split such workloads across disks with different properties
-- Windows Storage Spaces aren't supported with iSCSI (they can be configured and work similarly to striped Dynamic Volumes, although with Storage Spaces strips are wider)
+- Microsoft does not support Windows Storage Spaces with iSCSI storage. They can be configured with SolidFire and work similarly to striped Dynamic Volumes, although with Storage Spaces strips are wider and you're essentially on your own as far as Support is concerned
 
 ### Hyper-V
 
 - Note that Virtual Switches configured through Hyper-V Manager have default values not immediately obvious to the user
 - Once you create Virtual Switches, re-check IPv6 addresses (best eliminate them), adapter binding order and packet sizes on vEthernet NICs (including ManagementOS)
 - Re-check Hyper-V Live Migration settings - make sure iSCSI and Management networks have lowest preference for Live Migration
-- You may want to verify SMB3 if you set Hyper-V to use it for Live Migration
+- You may want to make sure that SMB3 works if you set Hyper-V to use it for Live Migration (refer to various Windows documentation)
 - If you have only [Gen 2](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/plan/should-i-create-a-generation-1-or-2-virtual-machine-in-hyper-v) VMs, you may create SolidFire volumes with 4kB rather than emulated 512b sectors (`-Enable512e:$False`). Potentially consolidate Gen 1 VMs on a handful of dedicated volumes with 512 byte emulation
   
 ### Automation
@@ -107,12 +108,18 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### Monitoring, Backup and other Integrations
 
+- Larger environments may consider attaching a NetApp E-Series (choose 25G iSCSI option) array to SolidFire environments. Backup storage can be directly attached to E-Series via 25G iSCSI
+- Hyper-V notes for Veeam 10
+  - Veeam BR has I/O latency-based throttle settings so as to not overload Hyper-V host(s) during backup. They acts as workload and job throttles so check this out if you use Veeam
+  - If Veeam runs from a VM, VMSwitch settings can be used to reserve minimum and limit maximum bandwidth on Veeam network(s) used by backup server
+  - If Veeam uses SolidFire storage, it may be a good idea to keep Veeam BR VM on its own CSV to eliminate the impact of write-heavy workload on other VMs. For non-Edge environments, attach Veeam VMs to external storage such as E-Series
+  - Veeam BR PowerShell can import SolidFire (or SolidFire.Core, for PowerShell is v6+) for automation and customization of backup and restore jobs
 - See [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire) for general information about various SolidFire integrations
 
 ## Application Notes
 
-- NetApp has published several TR's (Technical Reports) for Windows-based workloads. If you google it you may find more or less recent TR's that may help you
-- There are various best practices for SQL Server, but that is a topic in itself. You may split such workloads across disks with different properties
+- NetApp has published several TR's (Technical Reports) for Windows-based workloads. If you search the Web you may find more or less recent TR's that may help you
+- There are various best practices for SQL Server, but that is a topic in itself. You may split such workloads across VM and SolidFire disks with same or different QoS properties
 - High Availability: consider storing VM OS disks on CSVs but store data on directly accessed SolidFire iSCSI volumes (which requires slightly more account management on SolidFire as you'd have one account or one Volume Access Group per such HA application, so you may put "light" HA apps on CSVs and rely on VM failover, to find a good balance between manageability, availability and performance)
 
 ## Generic workflow for Hyper-V Clusters with NetApp SolidFire
@@ -127,12 +134,13 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
   - Install drivers, plugins, modules, etc.
     - Solidfire VSS Hardware Provider v2 (only on Hyper-V hosts)
     - SolidFire PowerShell Tools 1.5.1 or newer for Microsoft PowerShell 5.1 (management clients only)
-    - Drivers (NetApp HCI H41C node needs one for Mellanox and two for Intel - see under Drivers)
+    - Drivers (NetApp HCI H41C node needs one for Mellanox and two for Intel - see Drivers section)
   - Install required Windows features (Multipath I/O, Failover-Cluster, etc.) on Hyper-V hosts
-  - Update OS and reboot (maybe more than once)
+  - Update OS and reboot (you may need to do that more than once)
 - Configure Windows hosts
   - Hostnames, timezone, network interfaces, routes, DNS (A & PTR including virtual IPs), DHCP, IPv6, etc.
-  - Join Active Directory (recommended)
+  - Join Active Directory (recommended) and create an alias (group) for cluster administrators
+    - Enable NTP service on the Active Directory server (or other server) on the management network (used by SolidFire management IPs and the optional IPMI)
   - Make sure cluster members' DNS server is pointed at ADS DNS and that ADS forwards other requests upstream (DNS resolution must work!)
   - Configure Hyper-V and virtual switches
     - If Hyper-V is configured for Kerberos make sure Windows AD delegation for required resources is allowed with Kerberos
@@ -140,37 +148,50 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
     - Recheck Live Migraiton network preference in Hyper-V
 - Configure SolidFire storage
   - Create SolidFire cluster
-  - Create DNS entries for SolidFire cluster (management interfaces, IPMI, out-of-band mNode)
-  - Point NTP client to Windows ADS (primary and secondary) and one public NTP server
-  - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, hardware BMC IP, out-of-band mNode IP)
-  - Add Windows Hyper-V (and other, if necessary) hosts' initiators to Initiators list and create one or more Volume Access Groups (VAGs). Then add initiators to appropriate VAGs
-  - Create one low performance QoS policy for Quorum volumes (e.g. Min 100, Max 300, Burst 500) and several other policies for regular worklaods (Bronze, Silver, Gold)
-  - Create one quorum volume with the Quorum QoS storage policy and add it to the VAG
+  - Create DNS entries for SolidFire cluster (management interfaces, IPMI, out-of-band SolidFire management node ("mNode"))
+  - Point Solidire and mNode NTP client to Windows ADS (primary and secondary) and if Internet is reachable from SolidFire management network, at least one public NTP server (public NTP servers may ocassionally time out which is harmless)
+  - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, cluster Management Virtual IP, hardware BMC IP, out-of-band mNode IP; preferrably use Active Directory Certification Authority and DNS FQDNs rather than DIY OpenSSL stuff)
+    - Sometimes it's suitable to keep infrastture management hosts on a separate network and subdomain (PowerShell: `Add-DnsServerPrimaryZone -Name infra.netapp.io`)
+  - Add Windows Hyper-V (and other, if necessary) hosts' initiators to Initiators list and create one or more Volume Access Groups (VAGs). Then add initiators to appropriate VAGs if you plan to use VAGs and not CHAP (if you join ADS after you've done this, Windows Initiator Names will change so you'd have to re-do all SolidFire host IQNs and VAGs)
+  - Create one low performance QoS policy for Quorum volume (e.g. Min 100, Max 500, Burst 1,000) and several other policies for regular workloads (Bronze, Silver, Gold)
+  - Create one quorum volume with the Quorum QoS storage policy and add it to the Hyper-V cluster VAG
   - Enable and start iSCSI initiator service on each Windows Hyper-V host
   - Configure iSCSI initiators and Multipath I/O - only one Portal (SolidFire Storage Virtual IP) needs to be added and Multipath I/O only if you have multiple paths to SVIP
   - Create one or several volumes for VMs (Cluster Shared Volumes) and add them to the same Hyper-V VAG
     - Some scripts to get you started are available in the SolidFire PowerShell Tools repo on Github
 - Prepare Hyper-V for Windows Failover Clustering
   - Check firewall, DNS, AD configuration
-  - Recheck adapter binding, IPv6, DNS, as it may look different after Virtual Switch and vEthernet adapter creation
-  - Login iSCSI clients to Portal and connect to Quorum disk. On one Hyper-V host, bring the disk online and create NTFS volume on it using default settings
+  - Recheck adapter binding, IPv6, DNS, as it may look different after Virtual Switch and vEthernet adapter get added
+  - Enable and start iSCSI Intiator service
+  - Login iSCSI clients to Portal and connect to Quorum disk. On one Hyper-V host bring the disk online and create NTFS volume on it using default settings
 - Create Windows Failover Cluster
   - Validate configuration, especially DNS and firewall configuration
   - [Optionally](https://social.technet.microsoft.com/Forums/en-US/bf5285bc-fc72-474f-a0f4-232a2bd230b1/smb-signing-breaks-csv-access-crossnode?forum=winserverClustering) disable SMB signing/encryption
   - Create Failover Cluster
-    - If you use Failover Cluster to protect VMs, that becomes default location to create protected VMs (Hyper-V Manager is no longer used)
+    - If you use Failover Cluster to protect VMs, that becomes default location to create protected VMs (rather than Hyper-V Manager)
   - Add quorum disk to Failover Cluster
 - Deploy Cluster Shared Volumes
   - On all Windows hosts, login to SolidFire volumes meant for data
   - On one Windows host, bring those volumes online and format them
   - In the Failover Cluster GUI (assuming you use it to provide HA to VMs), add new cluster disk(s) and convert them to Cluster Shared Volumes
-  - When deploying VMs, place them on a CSV or change Hyper-V defaults
+  - When deploying VMs, place them on a CSV or change Hyper-V defaults to make that happen automatically
 - [Optional] Install (out-of-band) SolidFire Management VM on cluster shared storage. It can monitor SolidFire events and hardware and alert NetApp Support to problems, as well as give you actionable info via NetApp ActiveIQ analytics
 - [Optional] Install and configure NetApp OneCollect for scheduled gathering of sytem events and configuration changes. It can be extremely helpful in case of technical issues with the cluster
 
 ## Hyper-V and Storage Administration
 
 - Come up with a SolidFire, Windows and CSV naming rules (including for clones and remote copies, if aplicable)
+
+### Security
+
+- Deploy valid TLS certificates for SolidFire nodes and IPMI (if IPMI is in use)
+- Management IPs (SolidFire nodes, cluster Management IP, mNode and IPMI) should be on dedicated management network
+  - Consider which API and CLI clients need access to this network
+  - Hyper-V hosts and VMs with direct access to iSCSI targets may need it for VSS-assisted snapshots, management workstations may need it for PowerShell automation, backup software that integrates with SolidFire may need it to invoke hardware snapshots, etc.
+  - Outgoing access from SolidFire and IPMI nodes may be required for monitoring (mNode (ActiveIQ), SNMP v2 or v3)
+- iSCSI network generally needs to be exposed to Hyper-V hosts and VMs that need direct access to iSCSI
+  - These VMs and Hyper-V can use different VLANs (Trunk Mode to VM switch, and access mode to Management OS and some VMs, for example)
+  - Another consumer of iSCSI may be backup proxies, if backup software uses dedicated backup proxy VMs
 
 ### Windows Admin Center
 
@@ -181,7 +202,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
   - When one of these operations need to be perofrmed, use Admin Center to start a browser-based remote PowerShell session from a Hyper-V host, and execute the PowerShell script(s)
   - Then navigate to other parts of Admin Center (view CSVs, create VMs, etc.)
 - Note that Admin Center cannot be installed on Active Directory Domain Controller so maybe find a "management workstation" that can be used for that
-- Hyper-V cluster capacity and performance can be monitored through Admin Center dashboards; if you'd like to monitor it elsewhere, consider NetApp Cloud Insights
+- Hyper-V cluster capacity and performance can be monitored through Admin Center dashboards; if you'd like to monitor it from elsewhere, consider the gratis or commercial version of NetApp Cloud Insights
 
 ### Create and Remove Volumes
 
@@ -232,7 +253,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
   - A snapshot of a paired (replicated) volume can be tagged to follow established replication relationship
 - Hyper-V supports native replication of VMs but I haven't tested it
 
-### Switch (Failover) to SolidFire Cluster with Replica
+### Switch (Failover) to SolidFire Cluster with Replica Volumes
 
 - Each SolidFire volume contains at least two details unique to that cluster, the cluster string and volume ID, as well as some other stuff (see in your iSCSI Intitiator Control Panel)
 - Target name of volume `ora` on Cluster `PROD` may contain strings like `abcd`, `ora` and `40` (VolumeID). Its async replica on Cluster `DR` may contain unque strings such as `wxyz`, `drora` and `2`
@@ -254,7 +275,7 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
   - Mellanox ConnectX-4 Lx NIC driver ([v2.30.51000](https://www.mellanox.com/products/adapter-software/ethernet/windows/winof-2))
   - Intel X550 NIC driver ([v25.0](https://downloadcenter.intel.com/download/28396/Intel-Network-Adapter-Driver-for-Windows-Server-2019-?product=88207))
 
-#### Network adapters and ports
+#### Network Adapters and Ports
 
 - SIOM Port 1 & 2 are 1/10 GigE Intel X550 (RJ-45)
 - The rest are Mellanox Connect-4 Lx with SFP28 (2 dual-ported NICs)
@@ -289,16 +310,18 @@ For additional SolidFire information, please refer to [awesome-solidfire](https:
 
 ### NetApp H615C
 
-- Two Mellanox Connect-4 Lx per server
+- Two Mellanox Connect-4 Lx with SFP28 (1 dual-ported NIC)
 - NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET
 
 ## Demo Videos
 
 - [Use Active Directory accounts for management of SolidFire clusters](https://youtu.be/IY8ooGMSaOA)
+- [Use Active Directory CA to create valid TLS certificates](https://youtu.be/sUZinsgghEg) for SolidFire nodes and IPMI (consider using a dedicated DNS subdomain & wildcard certificate)
 - [Hyper-V (Windows Server 2019) and Cluster Shared Volumes](https://youtu.be/GL9S6GkP-Z8) - Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet. Hyper-V uses single NIC for iSCSI, but the SQL Server 2019 demo video (below) uses Multipath-IO
 - [SQL Server 2019 VM on Hyper-V](https://youtu.be/9VR0B393Qe4) - showcases Multipath-IO inside of SQL Server VM directly accessing SolidFire iSCSI volumes and Live Migration using Mellanox-4 Lx and Mellanox SN2010 switches
 - [Create snapshot schedule](https://youtu.be/lMcStxK5EJ0) for crash-consistent SolidFire snapshots
 - [Use SolidFire Replication](https://youtu.be/2EaAycfCRvY) to replicate volumes and snapshots to a remote site (quick UI and PowerShell demo)
+- [Veeam 10 with SolidFire in a Hyper-V environment](https://youtu.be/cZqF1LShnM0) shows a simple demo and discusses network- and storage-QoS related settings
 
 ## Frequently Asked Questions
 
