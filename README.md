@@ -1,6 +1,6 @@
 # solidfire-windows: Notes on Microsoft Windows with NetApp SolidFire
 
-Notes on Windows Server Hyper-V clusters with NetApp SolidFire, including (but not limited to) NeApp HCI H410C (servers) and Mellanox SN2010 switches.
+Notes on Windows Server Hyper-V clusters with NetApp SolidFire, including (but not limited to) NetApp HCI H410C (servers) and Mellanox SN2010 switches.
 
 For additional SolidFire-related information, please refer to [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire).
 
@@ -41,8 +41,8 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Each SolidFire volume is available on one network (subnet and VLAN). Different targets may be served over multiple networks and VLANs when SolidFire uses Trunk Mode switch ports.
   - iSCSI clients connect to SolidFire portal - Storage Virtual IP (SVIP) - which redirects each to the SolidFire node which hosts the target (volume) of interest (iSCSI login redirection is described in [RFC-3720](https://tools.ietf.org/html/rfc3720))
   - Volumes are ocassionally rebalanced, transparently to the client
-- Multiple connections from one iSCSI client to single volume (with or without MPIO) are rarely needed (NetApp AFF and E-Series are more suitable one or few large workloads)
-  - Network adapter team (bonding) creates one path per volume and provides link redundancy, which is enough for 90% of use cases
+- Multiple connections from one iSCSI client to single volume (with or without MPIO) are rarely needed (NetApp AFF and E-Series are more suitable for one or few large workloads)
+  - Network adapter teaming (bonding) creates one path per volume and provides link redundancy, which is enough for 90% of use cases
   - It is not possible to establish two connections (sessions) to the same volume with only one initiator IP
   - Thre are several ways to create two iSCSI connections to a SolidFire volume. They require Multipath I/O and one of the following (not a complete list):
     - Use four NICs to create two teams on the same network, set up one connection from each adapter team's IP address
@@ -61,14 +61,15 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - NIC registration in DNS for interfaces on iSCSI network (also Live Migration and other networks which don't need it)
   - DHCP service on iSCSI and Live Migration network(s), but if you need it, hand out MTU 9000 or such through DHCP options
   - DNS and NETBIOS registration on iSCSI and Live Migration network(s)
-- It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, use Trunk Mode on network switch ports and VLANs on VMSwitch (to segregate workloads and tenants)
+- It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, and use Trunk Mode on network switch ports and VLANs on VMSwitch (to segregate workloads and tenants)
 - Some network and other configuration changes may require Windows to be restarted although it won't prompt you, so if some configuration changes don't take effect, either check the documentation or reboot the server to see if that helps
 - It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is reccommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
-- It is practically mandatory to use Trunk Mode on 10/25 GigE because in all likelihood you'll need more than one VLAN for iSCSI, backup and other purposes. Mellanox SN2010 has a variant of it, Hybrid Mode
+- It is practically mandatory to use Trunk Mode on 10/25 GigE because in all likelihood you'll need more than one VLAN for iSCSI, backup and other purposes. Mellanox ONYX (SN2010, SN2100, SN2700) has a variant of it called Hybrid Mode
 
 ### iSCSI
 
 - (Optional) Increase the maximum duration of I/O timeouts and lower the frequency of accessibility checks (not sure how much it matters - likely not unless the cluster is very busy or has hundreds of volumes)
+- VMs and services that directly attach to iSCSI disks sometimes need to be set to Delayed Start to give iSCSI Initiator enough time to access SolidFire volumes. My experiments with creating service dependencies (on iSCSI Initiator) didn't work out, but delayed start (say, of SQL Server service) did
 
 ### Multipath I/O
 
@@ -108,18 +109,18 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Monitoring, Backup and other Integrations
 
-- Larger environments may consider attaching a NetApp E-Series (choose 25G iSCSI option) array to SolidFire environments. Backup storage can be directly attached to E-Series via 25G iSCSI
+- Larger environments may consider attaching a NetApp E-Series (I recommend the 25G iSCSI HIC optional add-on) array to SolidFire environment. Backup application can be directly attached to E-Series via 25G or 10G iSCSI
 - Hyper-V notes for Veeam 10
   - Veeam BR has I/O latency-based throttle settings so as to not overload Hyper-V host(s) during backup. They acts as workload and job throttles so check this out if you use Veeam
-  - If Veeam runs from a VM, VMSwitch settings can be used to reserve minimum and limit maximum bandwidth on Veeam network(s) used by backup server
-  - If Veeam uses SolidFire storage, it may be a good idea to keep Veeam BR VM on its own CSV to eliminate the impact of write-heavy workload on other VMs. For non-Edge environments, attach Veeam VMs to external storage such as E-Series
-  - Veeam BR PowerShell can import SolidFire (or SolidFire.Core, for PowerShell is v6+) for automation and customization of backup and restore jobs
+  - If Veeam runs from within a VM, VMSwitch settings can be used to reserve minimum and limit maximum bandwidth on Veeam network(s) used by backup server
+  - If Veeam BR uses SolidFire storage, it may be a good idea to keep Veeam BR VM on its own CSV to eliminate the impact of write-heavy workload on other VMs. For non-Edge environments, attach Veeam VMs to external storage such as E-Series
+  - Veeam BR PowerShell can import SolidFire (or SolidFire.Core, for PowerShell is v6+) module for automation and customization of backup and restore jobs
 - See [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire) for general information about various SolidFire integrations
 
 ## Application Notes
 
 - NetApp has published several TR's (Technical Reports) for Windows-based workloads. If you search the Web you may find more or less recent TR's that may help you
-- There are various best practices for SQL Server, but that is a topic in itself. You may split such workloads across VM and SolidFire disks with same or different QoS properties
+- There are various best practices for SQL Server, but that is a topic in itself and there's a NetApp TR that deals with it. You may split DB workloads across VM disks and SolidFire disks with same or different (e.g for data & logs) QoS properties
 - High Availability: consider storing VM OS disks on CSVs but store data on directly accessed SolidFire iSCSI volumes (which requires slightly more account management on SolidFire as you'd have one account or one Volume Access Group per such HA application, so you may put "light" HA apps on CSVs and rely on VM failover, to find a good balance between manageability, availability and performance)
 
 ## Generic workflow for Hyper-V Clusters with NetApp SolidFire
@@ -225,15 +226,15 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Storage Clones
 
-- Clones have to be created from existing volumes or snapshots, which is asynchronous operation, few of which can run in parallel (`New-SFClone`)
-- Like on other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from clones and resignature (assign a different Volume ID) to clones, and then use SolidFire API or GUI to re-assign the volume to the Hyper-V VAG (or other host)
-- Note that it is possible to "resync" one volume to another, so if you need to update a large cloned volume that differs by just a couple of GB, check out `Copy-SFVolume`
+- Clones have to be created from existing volumes or snapshots (asynchronous operation), few of which can run in parallel (`New-SFClone`, refer to Element API documentation for details)
+- Like with most other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from a clone and resignature (assign a different Volume ID) the volume, and then use SolidFire API or GUI to re-assign the volume to a Hyper-V VAG (or other host (group))
+- Note that it is possible to "resync" one volume to another, so if you need to update a large clone that differs by just a couple of GB, check out `Copy-SFVolume` - it can help you significantly speed up clone refresh operation
 - As mentioned above, have clear naming rules to avoid confusion due to duplicate volume names
 
 ### Volume Resize
 
 - You can extend a volume on SolidFire (up to 16 TiB) using `Set-SFVolume` or the UI, and then resize the volume and filesystem on the iSCSI client (I haven't tried with CSV)
-- Volume shrink; if you want to shrink a volume create a new one, move the VMs to the new volume, and then remove the large volume; as data would be physically copied from one volume to another, mind the copy workload if large amounts of VMs are involved. If done offline, a good approach could be to unregister a VM, use xcopy (with appropriate bandwidth throttle during busy hours) to move the VMs to new volume and then register the VMs without changing VM ID
+- Volume shrink; if you want to shrink a volume create a new one, move the VMs to the new volume, and then remove the large volume; as data would be physically copied from one volume to another, mind the copy workload if large amounts of VMs are involved. If done offline, a good approach could be to unregister a VM, use NetApp XCP or xcopy (with appropriate bandwidth limit during busy hours) to move the VMs to new volume and then register the VMs without changing VM ID
 
 ### Rethin (Unmap) Unused Filesystem Blocks
 
@@ -267,6 +268,10 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 ## Microsoft Windows on NetApp HCI Servers ("Compute Nodes")
 
 - There are no "official" NetApp-released drivers and firmware for Microsoft Windows, so we can use latest & greatest vendor-released drivers and firmware
+
+## Microsoft Windows on NetApp HCI Compute Nodes
+
+- H410C systems have the ability to configure Intel RSTe with SATA drives. Users interested in this option should inquire with their NetApp representative
 
 ### NetApp H410C
 
@@ -308,10 +313,15 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - NetApp HCI H410C with 2 cables uses vDS (see H615C below)
 
-### NetApp H615C
+### NetApp H615C and H610C
 
-- Two Mellanox Connect-4 Lx with SFP28 (1 dual-ported NIC)
-- NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET
+- Network
+  - Two Mellanox Connect-4 Lx with SFP28 (1 dual-ported NIC) on all H610C and H615C models
+  - Refer to driver instructions for NetApp H410C. Both H610C and H615C have a dual ported Connect-4 Lx; only the former has a dual-ported Intel 1/10 NIC with RJ45 port
+  - NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET. The H615C would likely invariably use a similar approach (and Trunk Mode), whereas the H610C could use a combination, either (Access Mode), or both
+- GPU:
+  - H610C: NVIDIA Tesla M10 (2 x M10)
+  - H615C: NVIDIA Tesla T4 (selected model, 3 x T4 GPU)
 
 ## Demo Videos
 
