@@ -271,7 +271,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ## Microsoft Windows on NetApp HCI Compute Nodes
 
-- H410C systems have the ability to configure Intel RSTe with SATA drives. Users interested in this option should inquire with their NetApp representative
+- H410C and H615C systems may have the ability to configure Intel VROC (RSTe) with sSATA drives (depending on the OS and version). Users interested in this option should inquire with their NetApp representative
 
 ### NetApp H410C
 
@@ -322,6 +322,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - GPU:
   - H610C: NVIDIA Tesla M10 (2 x M10)
   - H615C: NVIDIA Tesla T4 (selected model, 3 x T4 GPU)
+- Intel VROC (for Microsoft Windows 2019): Intel VROC v6.2.0.1239 was one of drivers found to work with Windows Server 2019 (see the earlier note on Intel VROC (formerly RSTe) 
 
 ## Demo Videos
 
