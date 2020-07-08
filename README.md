@@ -18,6 +18,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - [Application Notes](#application-notes)
   - [Generic workflow for Hyper-V Clusters with NetApp SolidFire](#generic-workflow-for-hyper-v-clusters-with-netapp-solidfire)
   - [Hyper-V and Storage Administration](#hyper-v-and-storage-administration)
+    - [Security](#security)
     - [Windows Admin Center](#windows-admin-center)
     - [Create and Remove Volumes](#create-and-remove-volumes)
     - [Storage Snapshots](#storage-snapshots)
@@ -26,12 +27,13 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - [Rethin (Unmap) Unused Filesystem Blocks](#rethin-unmap-unused-filesystem-blocks)
     - [Dealing with Unused Volumes](#dealing-with-unused-volumes)
     - [Storage-Based and Native Hyper-V Replication](#storage-based-and-native-hyper-v-replication)
-    - [Switch (Failover) to SolidFire Cluster with Replica](#switch-failover-to-solidfire-cluster-with-replica)
+    - [Switch (Failover) to SolidFire Cluster with Replica Volumes](#switch-failover-to-solidfire-cluster-with-replica-volumes)
     - [Using SolidFire Object Attributes](#using-solidfire-object-attributes)
   - [Microsoft Windows on NetApp HCI Servers ("Compute Nodes")](#microsoft-windows-on-netapp-hci-servers-compute-nodes)
+  - [Microsoft Windows on NetApp HCI Compute Nodes](#microsoft-windows-on-netapp-hci-compute-nodes)
     - [NetApp H410C](#netapp-h410c)
-      - [Network adapters and ports](#network-adapters-and-ports)
-    - [NetApp H615C](#netapp-h615c)
+      - [Network Adapters and Ports](#network-adapters-and-ports)
+    - [NetApp H615C and H610C](#netapp-h615c-and-h610c)
   - [Demo Videos](#demo-videos)
   - [Frequently Asked Questions](#frequently-asked-questions)
   - [License and Trademarks](#license-and-trademarks)
@@ -262,7 +264,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Using SolidFire Object Attributes
 
-- Most SolidFire objects - such as Volumes and Snapshots - can have custom attributes in the form of KV pairs. NetApp Trident makes use of custom volume attributes
+- Key SolidFire storage objects - such as Volumes and Snapshots - can have custom attributes in the form of KV pairs. NetApp Trident makes use of custom volume attributes
 - We can leverage this feature for management and reporting on Hyper-V as well (see Element API Reference Guide or awesome-solidfire repository for details on this)
 
 ## Microsoft Windows on NetApp HCI Servers ("Compute Nodes")
@@ -272,10 +274,11 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 ## Microsoft Windows on NetApp HCI Compute Nodes
 
 - H410C and H615C systems may have the ability to configure Intel VROC (RSTe) with sSATA drives (depending on the OS and version). Users interested in this option should inquire with their NetApp representative
+- Hardware monitoring is available through IPMI
 
 ### NetApp H410C
 
-- Links to must-install drivers for Windows on NetApp H410C are given below. The URLs link to a recent driver file for each (but as mentioned above, free feel to use any version that works for you)
+- Links to must-have drivers for Windows on NetApp H410C are given below. The URLs link to a recent driver file for each (but as mentioned above, free feel to use any version that works for you)
   - Intel C620 chpiset driver ([v10.1.17903.8106](https://downloadcenter.intel.com/download/28531/Intel-Server-Chipset-Driver-for-Windows-))
   - Mellanox ConnectX-4 Lx NIC driver ([v2.30.51000](https://www.mellanox.com/products/adapter-software/ethernet/windows/winof-2))
   - Intel X550 NIC driver ([v25.0](https://downloadcenter.intel.com/download/28396/Intel-Network-Adapter-Driver-for-Windows-Server-2019-?product=88207))
@@ -315,14 +318,17 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### NetApp H615C and H610C
 
+- Intel C620 Chipset driver v10.1.17903.8106
 - Network
   - Two Mellanox Connect-4 Lx with SFP28 (1 dual-ported NIC) on all H610C and H615C models
   - Refer to driver instructions for NetApp H410C. Both H610C and H615C have a dual ported Connect-4 Lx; only the former has a dual-ported Intel 1/10 NIC with RJ45 port
   - NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET. The H615C would likely invariably use a similar approach (and Trunk Mode), whereas the H610C could use a combination, either (Access Mode), or both
 - GPU:
   - H610C: NVIDIA Tesla M10 (2 x M10)
-  - H615C: NVIDIA Tesla T4 (selected model, 3 x T4 GPU)
-- Intel VROC (for Microsoft Windows 2019): Intel VROC v6.2.0.1239 was one of drivers found to work with Windows Server 2019 (see the earlier note on Intel VROC (formerly RSTe) 
+  - H615C: NVIDIA Tesla T4 (selected model, 3 x T4 GPU) 
+    - Production-ready driver: use latest NVIDIA driver for Tesla T4 with WHQL designation (e.g. [v443.18](https://www.nvidia.com/content/DriverDownload-March2009/confirmation.php?url=/tesla/443.18/443.18-tesla-desktop-winserver-2019-2016-international.exe&lang=us&type=Tesla) from [NVIDIA Downloads](https://www.nvidia.com/Download/index.aspx?lang=en-us), Tesla > T-Series > Tesla T4 > Windows Server 2019)
+    - Experimental drivers: Windows Server 2019 Version 1809 with CUDA 11 Beta (11.0.1_451.22) containing NVIDIA driver 451.22 worked without errors
+- Intel VROC (for Microsoft Windows 2019): Intel VROC v6.2.0.1239 was one of the VROC/RSTe drivers found to work with Windows Server 2019 (see the earlier note on Intel VROC (formerly RSTe) 
 
 ## Demo Videos
 
