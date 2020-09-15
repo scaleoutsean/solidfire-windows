@@ -67,6 +67,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Some network and other configuration changes may require Windows to be restarted although it won't prompt you, so if some configuration changes don't take effect, either check the documentation or reboot the server to see if that helps
 - It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is reccommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
 - It is practically mandatory to use Trunk Mode on 10/25 GigE because in all likelihood you'll need more than one VLAN for iSCSI, backup and other purposes. Mellanox ONYX (SN2010, SN2100, SN2700) has a variant of it called Hybrid Mode
+- In non-Hyper-V (i.e. non-virtualized) Windows environments 2 or mroe network cables can be Teamed in Trunk Mode (see this [Mellanox article](https://community.mellanox.com/s/article/howto-configure-multiple-vlans-on-windows-2012-server)) to provide VLAN-based segregation between iSCSI, workload and other traffic
 
 ### iSCSI
 
