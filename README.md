@@ -333,13 +333,14 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ## Demo Videos
 
-- [Use Active Directory accounts for management of SolidFire clusters](https://youtu.be/IY8ooGMSaOA)
-- [Use Active Directory CA to create valid TLS certificates](https://youtu.be/sUZinsgghEg) for SolidFire nodes and IPMI (consider using a dedicated DNS subdomain & wildcard certificate)
-- [Hyper-V (Windows Server 2019) and Cluster Shared Volumes](https://youtu.be/GL9S6GkP-Z8) - Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet. Hyper-V uses single NIC for iSCSI, but the SQL Server 2019 demo video (below) uses Multipath-IO
-- [SQL Server 2019 VM on Hyper-V](https://youtu.be/9VR0B393Qe4) - showcases Multipath-IO inside of SQL Server VM directly accessing SolidFire iSCSI volumes and Live Migration using Mellanox-4 Lx and Mellanox SN2010 switches
-- [Create snapshot schedule](https://youtu.be/lMcStxK5EJ0) for crash-consistent SolidFire snapshots
-- [Use SolidFire Replication](https://youtu.be/2EaAycfCRvY) to replicate volumes and snapshots to a remote site (quick UI and PowerShell demo)
-- [Veeam 10 with SolidFire in a Hyper-V environment](https://youtu.be/cZqF1LShnM0) shows a simple demo and discusses network- and storage-QoS related settings
+- [Use Active Directory accounts for management of SolidFire clusters](https://youtu.be/G10GWFwXxko)
+- [Use Active Directory CA to create valid TLS certificates](https://youtu.be/xDik8l82IG0) for SolidFire nodes and IPMI (consider using a dedicated DNS subdomain & wildcard certificate)
+- [Hyper-V (Windows Server 2019) and Cluster Shared Volumes](https://youtu.be/ykU83b-s6Ls) - Windows Server 2019 (Hyper-V) on NetApp H410C connected to SolidFire 11.7 (NetApp HCI H410S) using Mellanox SN2010 25G Ethernet. Hyper-V uses single NIC for iSCSI, but the SQL Server 2019 demo video (below) uses Multipath-IO
+- [SQL Server 2019 VM on Hyper-V](https://youtu.be/mrCRbX-6_qQ) - showcases Multipath-IO inside of SQL Server VM directly accessing SolidFire iSCSI volumes and Live Migration using Mellanox-4 Lx and Mellanox SN2010 switches
+- [Create a volume snapshot schedule](https://youtu.be/rDjTs79gcy8) for crash-consistent SolidFire snapshots
+- [Set up SolidFire Replication with PowerShell](https://youtu.be/LdKBYJhvwrU) to replicate volumes and snapshots to a remote site (quick UI and PowerShell demo)
+- [Veeam 10 with SolidFire in a Hyper-V environment](https://youtu.be/rDjTs79gcy8) shows a simple demo and discusses network- and storage-QoS related settings
+- [Rubrik in a Hyper-V environment with NetApp HCI compute nodes](https://youtu.be/4C4o5DUhmrQ)
 
 ## Frequently Asked Questions
 
