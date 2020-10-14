@@ -100,7 +100,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   
 ### Automation
 
-- Deploy SolidFire PowerShell Tools for Windows on your management VM. It is recommended to use SolidFire PowerShell Tools for Microsoft PowerShell 5.1: `Install-Module -Name SolidFire  -Scope CurrentUser`
+- Deploy SolidFire PowerShell Tools for Windows on your management VM. It is recommended to use SolidFire PowerShell Tools for Microsoft PowerShell 5.1: `Install-Module -Name SolidFire  -Scope CurrentUser`. If PowerShell 6 (or 7) is desired, consider using PowerShell Tools 1.6 (download from NetApp Support Site > Tools section as that version is not in PowerShell Gallery)
 - Install SolidFire VSS Hardware Provider for Windows Server 2019 and 2016 on your Hyper-V hosts (and VMs, if you have them configured to directly access iSCSI)
 - SolidFire is easy to automate (`New-SFVolume`, `Add-SFVolumeToVolumeAccessGroup`, after you've set up cluster, added iSCSI initiators and created QoS policies and Volume Access Groups; to remove a volume from Hyper-V CSVs you'd remove it from WFC and OS as per usual procedures for iSCSI devices, remove it from VAG (`Remove-SFVolumeFromVolumeAccessGroup`) and then delete it (`Remove-SFVolume`), assuming it didn't have replication or SnapMirror relationships in place
 - It's possible to automate SolidFire with Terraform or Ansible, but unless one already uses (or wants to use) these tools it's easy enough to put together a custom PowerShell script that works for your needs
