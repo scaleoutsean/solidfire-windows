@@ -29,8 +29,9 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - [Storage-Based and Native Hyper-V Replication](#storage-based-and-native-hyper-v-replication)
     - [Switch (Failover) to SolidFire Cluster with Replica Volumes](#switch-failover-to-solidfire-cluster-with-replica-volumes)
     - [Using SolidFire Object Attributes](#using-solidfire-object-attributes)
-  - [Microsoft Windows on NetApp HCI Servers ("Compute Nodes")](#microsoft-windows-on-netapp-hci-servers-compute-nodes)
-  - [Microsoft Windows on NetApp HCI Compute Nodes](#microsoft-windows-on-netapp-hci-compute-nodes)
+  - [Microsoft Windows drivers for NetApp HCI Servers ("Compute Nodes")](#microsoft-windows-drivers-for-netapp-hci-servers-compute-nodes)
+  - [Microsoft Windows on NetApp HCI Compute Nodes with RAID1 system volume](#microsoft-windows-on-netapp-hci-compute-nodes-with-raid1-system-volume)
+  - [NetApp Active IQ OneCollect](#netapp-active-iq-onecollect)
     - [NetApp H410C](#netapp-h410c)
       - [Network Adapters and Ports](#network-adapters-and-ports)
     - [NetApp H615C and H610C](#netapp-h615c-and-h610c)
@@ -67,7 +68,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Some network and other configuration changes may require Windows to be restarted although it won't prompt you, so if some configuration changes don't take effect, either check the documentation or reboot the server to see if that helps
 - It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is reccommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
 - It is practically mandatory to use Trunk Mode on 10/25 GigE because in all likelihood you'll need more than one VLAN for iSCSI, backup and other purposes. Mellanox ONYX (SN2010, SN2100, SN2700) has a variant of it called Hybrid Mode
-- In non-Hyper-V (i.e. non-virtualized) Windows environments 2 or mroe network cables can be Teamed in Trunk Mode (see this [Mellanox article](https://community.mellanox.com/s/article/howto-configure-multiple-vlans-on-windows-2012-server)) to provide VLAN-based segregation between iSCSI, workload and other traffic
+- In non-Hyper-V (i.e. non-virtualized) Windows environments, two or more network cables can be Teamed in Trunk Mode (see this [Mellanox article](https://community.mellanox.com/s/article/howto-configure-multiple-vlans-on-windows-2012-server)) to provide VLAN-based segregation between iSCSI, workload and other traffic
 
 ### iSCSI
 
@@ -82,8 +83,8 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Disks
 
-- Maximum SolidFire volume size is 16TB; it's hard to generalize but for an N-node SolidFire cluster one could create anywhere between N x 2 to N x 4 volumes, 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
-- SolidFire supports 512e (and as of v11.7 still defaults to 512e) but newer Hyper-V environments and VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
+- Maximum SolidFire volume size is 16 TiB; it's hard to generalize but for an N-node SolidFire cluster one could create anywhere between N x 2 to N x 4 volumes, 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
+- SolidFire supports 512e (and as of v12.2 still defaults to 512e) but newer Hyper-V environments and VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
 - Maximum SolidFire volume performance depends on the I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
 - In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore). Don't unnecessarily complicate things
 - Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if the workload isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
@@ -153,6 +154,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Configure SolidFire storage
   - Create SolidFire cluster
   - Create DNS entries for SolidFire cluster (management interfaces, IPMI, out-of-band SolidFire management node ("mNode"))
+    - SolidFire mMnode can be installed from an ISO that you can download from Downloads at NetApp.com. Installation guide: work by NetApp Hybrid Cloud Control [how-to](https://docs.netapp.com/us-en/hci/docs/task_mnode_install.html), just skip the vCenter part if you're installing in a Windows Hyper-V environment that doesn't have vCenter
   - Point Solidire and mNode NTP client to Windows ADS (primary and secondary) and if Internet is reachable from SolidFire management network, at least one public NTP server (public NTP servers may ocassionally time out which is harmless)
   - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, cluster Management Virtual IP, hardware BMC IP, out-of-band mNode IP; preferrably use Active Directory Certification Authority and DNS FQDNs rather than DIY OpenSSL stuff)
     - Sometimes it's suitable to keep infrastture management hosts on a separate network and subdomain (PowerShell: `Add-DnsServerPrimaryZone -Name infra.netapp.io`)
@@ -249,7 +251,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - SolidFire lets you tag volumes (using a project code or owner name, for example)
 - As time goes by, you may end up with a bunch of unused (that is, without iSCSI connections) volumes that seemingly belong to no one, so use proper naming and tag them to be able to sort them out and create meaningful reports
-- It is also possible (15 lines of PowerShell) to identify unused volumes
+- It is also possible (15 lines of PowerShell) to identify unused volumes (sample PowerShell script that does this can be found in the Awesome SolidFire repo)
 
 ### Storage-Based and Native Hyper-V Replication
 
@@ -268,19 +270,29 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Key SolidFire storage objects - such as Volumes and Snapshots - can have custom attributes in the form of KV pairs. NetApp Trident makes use of custom volume attributes
 - We can leverage this feature for management and reporting on Hyper-V as well (see Element API Reference Guide or awesome-solidfire repository for details on this)
 
-## Microsoft Windows on NetApp HCI Servers ("Compute Nodes")
+## Microsoft Windows drivers for NetApp HCI Servers ("Compute Nodes")
 
-- There are no "official" NetApp-released drivers and firmware for Microsoft Windows, so we can use latest & greatest vendor-released drivers and firmware
+- There are no "official" NetApp-released drivers and firmware for Microsoft Windows, so we can use recent vendor-released drivers and firmware (see driver notes below)
+- General approach (example for Mellanox NIC(s) on the H410C and H615C)
+  - Check latest HCI f/w supported (login for support site required) [here](https://kb.netapp.com/Advice_and_Troubleshooting/Hybrid_Cloud_Infrastructure/NetApp_HCI/Firmware_and_driver_versions_in_NetApp_HCI_and_NetApp_Element_software) and find the latest f/w for your system and NIC. You can update compute node firmware (including BIOS, BMC drivers and the rest) from NetApp HCI NDE or manually. Pay attention - H615C and H410C may support different Mellanox 4-Lx firmware although both use the same chip
+  - Now with this firmware version information go to NVIDIA/Mellanox driver downloads and start looking from newer drivers WinOF-2 drivers. Driver Release Notes contain the information about recommended and supported NIC f/w (an example for WinOF-2 v2.30.51000 can be seen [here](https://docs.mellanox.com/display/winof2v23051000/Supported+Network+Adapter+Cards+and+MFT+Tools))
+  - Do the same for the Intel NIC (if applicable, such as on the H410C)
+  - Update f/w first and then install the driver
 
-## Microsoft Windows on NetApp HCI Compute Nodes
+## Microsoft Windows on NetApp HCI Compute Nodes with RAID1 system volume
 
 - H410C and H615C systems may have the ability to configure Intel VROC (RSTe) with sSATA drives (depending on the OS and version). Users interested in this option should inquire with their NetApp representative
 - Hardware monitoring is available through IPMI
 
+## NetApp Active IQ OneCollect
+
+- [OneCollect](https://mysupport.netapp.com/site/tools/tool-eula/activeiq-onecollect/download) can be set to periodically collect event logs from SolidFire and Windows Server systems collected to it
+- It also makes it convenient and easy to submit logs to NetApp Support
+
 ### NetApp H410C
 
-- Links to must-have drivers for Windows on NetApp H410C are given below. The URLs link to a recent driver file for each (but as mentioned above, free feel to use any version that works for you)
-  - Intel C620 chpiset driver ([v10.1.17903.8106](https://downloadcenter.intel.com/download/28531/Intel-Server-Chipset-Driver-for-Windows-))
+- Links to must-have drivers for Windows on NetApp H410C are given below. The URLs link to a recent driver file for each (but as mentioned above, free feel to match the driver and firmware you have)
+  - Intel C620 chipset driver ([v10.1.17903.8106](https://downloadcenter.intel.com/download/28531/Intel-Server-Chipset-Driver-for-Windows-))
   - Mellanox ConnectX-4 Lx NIC driver ([v2.30.51000](https://www.mellanox.com/products/adapter-software/ethernet/windows/winof-2))
   - Intel X550 NIC driver ([v25.0](https://downloadcenter.intel.com/download/28396/Intel-Network-Adapter-Driver-for-Windows-Server-2019-?product=88207))
 
@@ -291,7 +303,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - Up to 6 ports that may be used by Windows, from left to right we label them A through F (HCI Port column)
 - IPMI (RJ-45) port is not shown
 
-```
+```raw
 | PCI | NIC  | Bus | Device | Func | HCI Port | Default OS Name   | Description (numeric suffix varies)     |
 |-----|------|-----|--------|------|----------|-------------------|-----------------------------------------|
 | 6   |  x   | 24  | 0      | 0    | A        | SIOM Port 1       | Intel(R) Ethernet Controller X550       |
@@ -304,7 +316,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - NetApp HCI H410C with 6 cables and ESXi uses vSS (switch) and assigns ports as per below. With Windows Server we may configure them differently so this is just for reference purposes
 
-```
+```raw
 | HCI Port | Mode   | Purpose                       |
 |----------|--------|-------------------------------|
 | A        | Access | Management                    |
@@ -325,11 +337,11 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - Refer to driver instructions for NetApp H410C. Both H610C and H615C have a dual ported Connect-4 Lx; only the former has a dual-ported Intel 1/10 NIC with RJ45 port
   - NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET. The H615C would likely invariably use a similar approach (and Trunk Mode), whereas the H610C could use a combination, either (Access Mode), or both
 - GPU:
-  - H610C: NVIDIA Tesla M10 (2 x M10)
-  - H615C: NVIDIA Tesla T4 (selected model, 3 x T4 GPU) 
+  - H610C: NVIDIA Tesla M10 (2 x M10 GPU)
+  - H615C: NVIDIA Tesla T4 (selected model, 3 x T4 GPU)
     - Production-ready driver: use latest NVIDIA driver for Tesla T4 with WHQL designation (e.g. [v443.18](https://www.nvidia.com/content/DriverDownload-March2009/confirmation.php?url=/tesla/443.18/443.18-tesla-desktop-winserver-2019-2016-international.exe&lang=us&type=Tesla) from [NVIDIA Downloads](https://www.nvidia.com/Download/index.aspx?lang=en-us), Tesla > T-Series > Tesla T4 > Windows Server 2019)
     - Experimental drivers: Windows Server 2019 Version 1809 with CUDA 11 Beta (11.0.1_451.22) containing NVIDIA driver 451.22 worked without errors
-- Intel VROC (for Microsoft Windows 2019): Intel VROC v6.2.0.1239 was one of the VROC/RSTe drivers found to work with Windows Server 2019 (see the earlier note on Intel VROC (formerly RSTe) 
+- Intel VROC (for Microsoft Windows 2019): Intel VROC v6.2.0.1239 was one of the VROC/RSTe drivers found to work with Windows Server 2019 (see the earlier note on Intel VROC (formerly RSTe))
 
 ## Demo Videos
 
