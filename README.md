@@ -36,6 +36,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
       - [Network Adapters and Ports](#network-adapters-and-ports)
     - [NetApp H615C and H610C](#netapp-h615c-and-h610c)
   - [Demo Videos](#demo-videos)
+  - [Sample Script for Initial Configuration of SolidFire with Windows](#sample-script-for-initial-configuration-of-solidfire-with-windows)
   - [Frequently Asked Questions](#frequently-asked-questions)
   - [License and Trademarks](#license-and-trademarks)
 
@@ -273,11 +274,15 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 ## Microsoft Windows drivers for NetApp HCI Servers ("Compute Nodes")
 
 - There are no "official" NetApp-released drivers and firmware for Microsoft Windows, so we can use recent vendor-released drivers and firmware (see driver notes below)
-- General approach (example for Mellanox NIC(s) on the H410C and H615C)
-  - Check latest HCI f/w supported (login for support site required) [here](https://kb.netapp.com/Advice_and_Troubleshooting/Hybrid_Cloud_Infrastructure/NetApp_HCI/Firmware_and_driver_versions_in_NetApp_HCI_and_NetApp_Element_software) and find the latest f/w for your system and NIC. You can update compute node firmware (including BIOS, BMC drivers and the rest) from NetApp HCI NDE or manually. Pay attention - H615C and H410C may support different Mellanox 4-Lx firmware although both use the same chip
+- INSTALLATION: General approach (example for Mellanox NIC(s) on the H410C and H615C)
+  - Check the latest NetApp HCI drivers (login for support site required) [here](https://kb.netapp.com/Advice_and_Troubleshooting/Hybrid_Cloud_Infrastructure/NetApp_HCI/Firmware_and_driver_versions_in_NetApp_HCI_and_NetApp_Element_software) and with that find the latest f/w for your system and NIC. Pay attention - H615C and H410C may support different Mellanox 4-Lx firmware although both use the same chip
   - Now with this firmware version information go to NVIDIA/Mellanox driver downloads and start looking from newer drivers WinOF-2 drivers. Driver Release Notes contain the information about recommended and supported NIC f/w (an example for WinOF-2 v2.30.51000 can be seen [here](https://docs.mellanox.com/display/winof2v23051000/Supported+Network+Adapter+Cards+and+MFT+Tools))
   - Do the same for the Intel NIC (if applicable, such as on the H410C)
-  - Update f/w first and then install the driver
+  - Update f/w first and then install a matching driver
+  - If you install a Mellanox driver that's very new and does not support f/w you have, it may offer to upgrade firmware. If you want to us the NetApp-supplied f/w, decline this offer and install a driver that supports the f/w you want to use
+- UPDATE:
+  - You can update compute node firmware (including BIOS, BMC drivers and the rest) from NetApp HCI NDE or manually. If another OS (such as Windows) is already installed, you'd probably want to upgrade f/w without NDE.
+  - When NetApp HCI releases a f/w upgrade in a new NDE version, you could get the f/w from the HCI Compute ISO or download it from the Mellanox Web site, use the [MFT utility](https://www.mellanox.com/support/firmware/mlxup-mft) to upgrade firmware and finally, and finally install one of Windows OFED-2 drivers that support that f/w. If you don't have any issues, better don't upgrade (considering that Windows OS can still change its routing or NIC names during routine maintenance operations)
 
 ## Microsoft Windows on NetApp HCI Compute Nodes with RAID1 system volume
 
@@ -334,7 +339,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Intel C620 Chipset driver v10.1.17903.8106
 - Network
   - Two Mellanox Connect-4 Lx with SFP28 (1 dual-ported NIC) on all H610C and H615C models
-  - Refer to driver instructions for NetApp H410C. Both H610C and H615C have a dual ported Connect-4 Lx; only the former has a dual-ported Intel 1/10 NIC with RJ45 port
+  - Refer to driver instructions for NetApp H410C. Both H610C and H615C have a dual ported Connect-4 Lx; only the former has a dual-ported Intel 1/10 NIC (RJ45)
   - NetApp HCI with ESXi uses vDS with switch ports in Trunk Mode which roughly translates to Windows Server Datacenter Edition with Network Controller and SET. The H615C would likely invariably use a similar approach (and Trunk Mode), whereas the H610C could use a combination, either (Access Mode), or both
 - GPU:
   - H610C: NVIDIA Tesla M10 (2 x M10 GPU)
@@ -353,6 +358,23 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - [Set up SolidFire Replication with PowerShell](https://youtu.be/LdKBYJhvwrU) to replicate volumes and snapshots to a remote site (quick UI and PowerShell demo)
 - [Veeam 10 with SolidFire in a Hyper-V environment](https://youtu.be/rDjTs79gcy8) shows a simple demo and discusses network- and storage-QoS related settings
 - [Rubrik in a Hyper-V environment with NetApp HCI compute nodes](https://youtu.be/4C4o5DUhmrQ)
+
+## Sample Script for Initial Configuration of SolidFire with Windows
+
+- This is a simple example of Widows-related SolidFire configuration:
+  - Enable Widows iSCSI Initiator
+  - Add SolidFire SVIP as iSCSI Target Portal
+  - Create SF Account (you'd reuse this for other Hyper-V hosts)
+  - Create SF Volumes (create a handful)
+  - Create a VAG (for MSCS or Hyper-V cluster, for example)
+  - Add Win Host IQN to SF (add more if you have more than one)
+  - Create a QoSPolicy (you can edit it later, but just create one to begin with). You may want to have one for the quorum volumes and more for other volumes
+
+![Configure-SF-For-First-Win2019-Host](config-sf-account-vag-iqn-for-first-win-host.gif)
+
+This takes about 10 seconds. After that you can repeat host-related steps (you don't want to create another account or VAG) on another server, and then you can create MPIO configuration for iSCSI, get iSCSI targets and start using them.
+
+Of course we could loop thru hosts and just do everything in one script, but we have several possible configurations (Hyper-V, non-Hyper-V, H410C, H615C) so the assumption is once you see how to do the SolidFire part, the rest should be easy.
 
 ## Frequently Asked Questions
 
