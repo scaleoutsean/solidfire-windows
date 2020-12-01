@@ -48,3 +48,4 @@ foreach ($vol in $SFWinVols) {
 # DNS hostname resolution returns one name only, and it must be in the FQDN format (i.e. resolve in DNS)
 $WinHost = (Resolve-DnsName $WinServerIp).Namehost
 $SFIqnId = (New-SFInitiator -Alias $WinHost -Name $WinInitiator -VolumeAccessGroupID $SFVagId).InitiatorID
+

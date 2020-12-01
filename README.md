@@ -36,7 +36,9 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
       - [Network Adapters and Ports](#network-adapters-and-ports)
     - [NetApp H615C and H610C](#netapp-h615c-and-h610c)
   - [Demo Videos](#demo-videos)
-  - [Sample Script for Initial Configuration of SolidFire with Windows](#sample-script-for-initial-configuration-of-solidfire-with-windows)
+  - [Sample Scripts for Initial Configuration of SolidFire with Windows](#sample-scripts-for-initial-configuration-of-solidfire-with-windows)
+    - [Start Windows iSCSI Initiator and Create storage account(s), Volumes, VAG and register IQN(s) on SolidFire](#start-windows-iscsi-initiator-and-create-storage-accounts-volumes-vag-and-register-iqns-on-solidfire)
+  - [Monitoring](#monitoring)
   - [Frequently Asked Questions](#frequently-asked-questions)
   - [License and Trademarks](#license-and-trademarks)
 
@@ -79,13 +81,13 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 ### Multipath I/O
 
 - If you don't have multiple links to SolidFire or other iSCSI target, you don't need it (one less thing to install and configure)
-- When adding vendor and product ID to MPIO configuration, use `SolidFir` and `SSD SAN`, respectively (only recommended if you use Multipath-IO)
-- There are no recent comparisons of various Multipath load balancing options on SolidFire. LQD should give best results in terms of performance, but if you're curious you can spend 30 minutes to evaluate them in your environment with your workloads
+- When adding vendor and product ID to MPIO configuration, use `SolidFir` and `SSD SAN`, respectively (only recommended if you use Multipath-IO (`Get-MPIOAvailableHW -VendorId "SolidFir"`))
+- There are no recent comparisons of various Multipath load balancing options on SolidFire. LQD (`Set-MSDSMGlobalDefaultLoadBalancePolicy -Policy LQD`)) supposedly gives best results in terms of performance, but if you're curious you can spend 30 minutes to evaluate them in your environment with your workload(s)
 
 ### Disks
 
 - Maximum SolidFire volume size is 16 TiB; it's hard to generalize but for an N-node SolidFire cluster one could create anywhere between N x 2 to N x 4 volumes, 1-4 TB each (example: five node cluster, 10 to 20 volumes, 2-4 TB each)
-- SolidFire supports 512e (and as of v12.2 still defaults to 512e) but newer Hyper-V environments and VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
+- SolidFire supports 512e (and as of v12.2 still defaults to 512e) but newer Hyper-V environments and Hyper-V VMs should work fine with 4kB volumes, so you may want to remember to disable 512e when creating new volumes if that works for you
 - Maximum SolidFire volume performance depends on the I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
 - In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore). Don't unnecessarily complicate things
 - Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if the workload isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
@@ -158,7 +160,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - SolidFire mMnode can be installed from an ISO that you can download from Downloads at NetApp.com. Installation guide: work by NetApp Hybrid Cloud Control [how-to](https://docs.netapp.com/us-en/hci/docs/task_mnode_install.html), just skip the vCenter part if you're installing in a Windows Hyper-V environment that doesn't have vCenter
   - Point Solidire and mNode NTP client to Windows ADS (primary and secondary) and if Internet is reachable from SolidFire management network, at least one public NTP server (public NTP servers may ocassionally time out which is harmless)
   - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, cluster Management Virtual IP, hardware BMC IP, out-of-band mNode IP; preferrably use Active Directory Certification Authority and DNS FQDNs rather than DIY OpenSSL stuff)
-    - Sometimes it's suitable to keep infrastture management hosts on a separate network and subdomain (PowerShell: `Add-DnsServerPrimaryZone -Name infra.netapp.io`)
+    - Sometimes it's suitable to keep infrastture management hosts on a separate network and subdomain (`Add-DnsServerPrimaryZone -Name infra.netapp.io`)
   - Add Windows Hyper-V (and other, if necessary) hosts' initiators to Initiators list and create one or more Volume Access Groups (VAGs). Then add initiators to appropriate VAGs if you plan to use VAGs and not CHAP (if you join ADS after you've done this, Windows Initiator Names will change so you'd have to re-do all SolidFire host IQNs and VAGs)
   - Create one low performance QoS policy for Quorum volume (e.g. Min 100, Max 500, Burst 1,000) and several other policies for regular workloads (Bronze, Silver, Gold)
   - Create one quorum volume with the Quorum QoS storage policy and add it to the Hyper-V cluster VAG
@@ -182,12 +184,12 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - On one Windows host, bring those volumes online and format them
   - In the Failover Cluster GUI (assuming you use it to provide HA to VMs), add new cluster disk(s) and convert them to Cluster Shared Volumes
   - When deploying VMs, place them on a CSV or change Hyper-V defaults to make that happen automatically
-- [Optional] Install (out-of-band) SolidFire Management VM on cluster shared storage. It can monitor SolidFire events and hardware and alert NetApp Support to problems, as well as give you actionable info via NetApp ActiveIQ analytics
+- [Optional] Install (out-of-band) SolidFire Management VM (use ISO to install) on Cluster Shared Storage. It can monitor SolidFire events and hardware and alert NetApp Support to problems, as well as give you actionable info via NetApp ActiveIQ analytics
 - [Optional] Install and configure NetApp OneCollect for scheduled gathering of sytem events and configuration changes. It can be extremely helpful in case of technical issues with the cluster
 
 ## Hyper-V and Storage Administration
 
-- Come up with a SolidFire, Windows and CSV naming rules (including for clones and remote copies, if aplicable)
+- Highly recommended: come up with naming rules (including for clones and remote copies, if aplicable) for SolidFire Windows and CSV Volumes and (SolidFire) Snapshots
 
 ### Security
 
@@ -227,7 +229,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Crash consistent snapshots may be created from PowerShell (`New-SFSnapshot`) or the SolidFire UI
   - Group snapshots are available as well (`New-SFGroupSnapshot`)
   - Demo Videos section below has a video which shows how to create a snapshot schedule in the SolidFire Web UI
-  - To create a bunch of schedules, create one in the Web UI, then `Get` it with SolidFire PowerShell tools and use it as a template to create others from PowerShell
+  - To create a bunch of schedules, create one in the Web UI, then `Get` it with SolidFire PowerShell tools and use it as a template to create others from PowerShell, or add other Volumes (by Volume ID) to the same snapshot schedule
 - Other alternatives include backup software (CommVault, Veeam, etc.) which may also leverage SolidFire VSS Hardware Provider
 
 ### Storage Clones
@@ -263,7 +265,10 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 ### Switch (Failover) to SolidFire Cluster with Replica Volumes
 
 - Each SolidFire volume contains at least two details unique to that cluster, the cluster string and volume ID, as well as some other stuff (see in your iSCSI Intitiator Control Panel)
-- Target name of volume `ora` on Cluster `PROD` may contain strings like `abcd`, `ora` and `40` (VolumeID). Its async replica on Cluster `DR` may contain unque strings such as `wxyz`, `drora` and `2`
+- Example: volume sql3 from DC1 replicated to volume drsql3 in DC2
+  - DC1: `iqn.2010-01.com.solidfire:ozv4.sql3.8` - Cluster ID `ozv4`, Volume `sql3`, Volume ID `8`
+  - DC2: `iqn.2010-01.com.solidfire:dro1.drsql3.27` - Cluster ID `dro1`, Volume `drsql3`, Volume ID `27`
+  - `iqn.2010-01.com.solidfire:` is fixed, the rest is `<ClusterUniqueID>.<VolumeName>.<VolumeID>`
 - Search, replace, rescan and connect accordingly
 
 ### Using SolidFire Object Attributes
@@ -278,20 +283,21 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - Check the latest NetApp HCI drivers (login for support site required) [here](https://kb.netapp.com/Advice_and_Troubleshooting/Hybrid_Cloud_Infrastructure/NetApp_HCI/Firmware_and_driver_versions_in_NetApp_HCI_and_NetApp_Element_software) and with that find the latest f/w for your system and NIC. Pay attention - H615C and H410C may support different Mellanox 4-Lx firmware although both use the same chip
   - Now with this firmware version information go to NVIDIA/Mellanox driver downloads and start looking from newer drivers WinOF-2 drivers. Driver Release Notes contain the information about recommended and supported NIC f/w (an example for WinOF-2 v2.30.51000 can be seen [here](https://docs.mellanox.com/display/winof2v23051000/Supported+Network+Adapter+Cards+and+MFT+Tools))
   - Do the same for the Intel NIC (if applicable, such as on the H410C)
-  - Update f/w first and then install a matching driver
-  - If you install a Mellanox driver that's very new and does not support f/w you have, it may offer to upgrade firmware. If you want to us the NetApp-supplied f/w, decline this offer and install a driver that supports the f/w you want to use
+  - Update f/w first and then install a matching Windows NIC driver
+    - If you install a Mellanox driver that's very new and does not support f/w you have, it may offer to upgrade firmware. If you want to us the NetApp-supplied f/w, decline this offer and install a driver that supports the f/w you want to use
 - UPDATE:
-  - You can update compute node firmware (including BIOS, BMC drivers and the rest) from NetApp HCI NDE or manually. If another OS (such as Windows) is already installed, you'd probably want to upgrade f/w without NDE.
+  - You can update compute node firmware (including BIOS, BMC drivers and the rest) from NetApp HCI NDE or manually. If another OS (such as Windows) is already installed, you'd probably want to upgrade f/w without NDE
   - When NetApp HCI releases a f/w upgrade in a new NDE version, you could get the f/w from the HCI Compute ISO or download it from the Mellanox Web site, use the [MFT utility](https://www.mellanox.com/support/firmware/mlxup-mft) to upgrade firmware and finally, and finally install one of Windows OFED-2 drivers that support that f/w. If you don't have any issues, better don't upgrade (considering that Windows OS can still change its routing or NIC names during routine maintenance operations)
+  - In theory if Windows is installed on the second internal disk, disk #1 (not disk #0, where NetApp HCI Bootstrap OS is installed in the case of NetApp HCI with VMware), you may be able to update BIOS, BMC and other f/w from NetApp NDE, while leaving the Windows OS in place (on disk #1). This is how it works for ESXi, but it's not explicitly supported with Windows. If you use RSTe/VROC (see below), then the both disks would be part of one RAID1-like volume.
 
 ## Microsoft Windows on NetApp HCI Compute Nodes with RAID1 system volume
 
 - H410C and H615C systems may have the ability to configure Intel VROC (RSTe) with sSATA drives (depending on the OS and version). Users interested in this option should inquire with their NetApp representative
-- Hardware monitoring is available through IPMI
 
 ## NetApp Active IQ OneCollect
 
 - [OneCollect](https://mysupport.netapp.com/site/tools/tool-eula/activeiq-onecollect/download) can be set to periodically collect event logs from SolidFire and Windows Server systems collected to it
+- This helps you monitor configuration drift and discover changes in things like driver versions and more
 - It also makes it convenient and easy to submit logs to NetApp Support
 
 ### NetApp H410C
@@ -359,22 +365,35 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - [Veeam 10 with SolidFire in a Hyper-V environment](https://youtu.be/rDjTs79gcy8) shows a simple demo and discusses network- and storage-QoS related settings
 - [Rubrik in a Hyper-V environment with NetApp HCI compute nodes](https://youtu.be/4C4o5DUhmrQ)
 
-## Sample Script for Initial Configuration of SolidFire with Windows
+## Sample Scripts for Initial Configuration of SolidFire with Windows
 
-- This is a simple example of Widows-related SolidFire configuration:
+This section focuses on iSCSI initiator- and storage-related scripts and commands. It will not cover generic Windows configuration which can vary wildly and is impossible to code, let alone maintain
+
+### Start Windows iSCSI Initiator and Create storage account(s), Volumes, VAG and register IQN(s) on SolidFire
+
+- This is a simple (find the script source in this repo) example of a Windows-related SolidFire storage configuration script:
   - Enable Widows iSCSI Initiator
   - Add SolidFire SVIP as iSCSI Target Portal
   - Create SF Account (you'd reuse this for other Hyper-V hosts)
   - Create SF Volumes (create a handful)
   - Create a VAG (for MSCS or Hyper-V cluster, for example)
   - Add Win Host IQN to SF (add more if you have more than one)
-  - Create a QoSPolicy (you can edit it later, but just create one to begin with). You may want to have one for the quorum volumes and more for other volumes
+  - Create a Storage QoSPolicy (you can edit it later, but just create one to begin with). You may want to have one for the quorum volumes and additional for other volumes
 
 ![Configure-SF-For-First-Win2019-Host](config-sf-account-vag-iqn-for-first-win-host.gif)
 
-This takes about 10 seconds. After that you can repeat host-related steps (you don't want to create another account or VAG) on another server, and then you can create MPIO configuration for iSCSI, get iSCSI targets and start using them.
+This script takes about 10 seconds to run.
 
-Of course we could loop thru hosts and just do everything in one script, but we have several possible configurations (Hyper-V, non-Hyper-V, H410C, H615C) so the assumption is once you see how to do the SolidFire part, the rest should be easy.
+After that you can repeat host-related steps on another server. You don't want to create another account or VAG in subsequent runs unless you have multiple clusters. 
+
+After you're done can create MPIO configuration for iSCSI, get iSCSI targets and start using them. As mentioned earlier, add the nodes to ADS (if you'll use it), finalize network configuration and form a cluster *before* you configure iSCSI storage for it. Do not configure iSCSI storage if you plan to continue to mess arround with Hyper-V hosts.
+
+## Monitoring
+
+- SolidFire monitoring is covered in the awesome-solidfire repository
+- Hardware monitoring for H-Series Compute Nodes is available through IPMI, SNMP (h/w MIB files) and regular Windows features
+  - The HCICollector repo (v0.7+) has sample configuration files and screenshots for IPMI-based monitoring
+  - SNMP monitoring can be easily set up the same way (collectd) and sent to Graphite
 
 ## Frequently Asked Questions
 
