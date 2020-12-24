@@ -36,8 +36,10 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
       - [Network Adapters and Ports](#network-adapters-and-ports)
     - [NetApp H615C and H610C](#netapp-h615c-and-h610c)
   - [Demo Videos](#demo-videos)
-  - [Sample Scripts for Initial Configuration of SolidFire with Windows](#sample-scripts-for-initial-configuration-of-solidfire-with-windows)
+  - [Scripts for NetApp HCI and SolidFire storage for Microsoft Windows](#scripts-for-netapp-hci-and-solidfire-storage-for-microsoft-windows)
     - [Start Windows iSCSI Initiator and Create storage account(s), Volumes, VAG and register IQN(s) on SolidFire](#start-windows-iscsi-initiator-and-create-storage-accounts-volumes-vag-and-register-iqns-on-solidfire)
+    - [Map SolidFire to Windows volumes](#map-solidfire-to-windows-volumes)
+    - [Automate host-side volume operations](#automate-host-side-volume-operations)
   - [Monitoring](#monitoring)
   - [Frequently Asked Questions](#frequently-asked-questions)
   - [License and Trademarks](#license-and-trademarks)
@@ -365,7 +367,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - [Veeam 10 with SolidFire in a Hyper-V environment](https://youtu.be/rDjTs79gcy8) shows a simple demo and discusses network- and storage-QoS related settings
 - [Rubrik in a Hyper-V environment with NetApp HCI compute nodes](https://youtu.be/4C4o5DUhmrQ)
 
-## Sample Scripts for Initial Configuration of SolidFire with Windows
+## Scripts for NetApp HCI and SolidFire storage for Microsoft Windows
 
 This section focuses on iSCSI initiator- and storage-related scripts and commands. It will not cover generic Windows configuration which can vary wildly and is impossible to code, let alone maintain
 
@@ -382,11 +384,72 @@ This section focuses on iSCSI initiator- and storage-related scripts and command
 
 ![Configure-SF-For-First-Win2019-Host](config-sf-account-vag-iqn-for-first-win-host.gif)
 
-This script takes about 10 seconds to run.
-
-After that you can repeat host-related steps on another server. You don't want to create another account or VAG in subsequent runs unless you have multiple clusters. 
+This script takes about 10 seconds to run. After that you can repeat host-related steps on another server. You don't want to create another account or VAG in subsequent runs unless you have multiple clusters.
 
 After you're done can create MPIO configuration for iSCSI, get iSCSI targets and start using them. As mentioned earlier, add the nodes to ADS (if you'll use it), finalize network configuration and form a cluster *before* you configure iSCSI storage for it. Do not configure iSCSI storage if you plan to continue to mess arround with Hyper-V hosts.
+
+### Map SolidFire to Windows volumes
+
+This is a frequently needed task, to see what volume is mapped (or not) to a Windows iSCSI client. There's a script (win_SF_identify_vols.ps1) located [here](https://github.com/scaleoutsean/SF-scripts) that works for the most part (but fails in minor ways.) I can't write a new one at the moment, but you can give it a try.
+
+An enhanced version might do the following:
+
+- Inputs
+  - SolidFire MVIP and a list of Windows hosts
+  - List of SolidFire volumes or SolidFire storage account or SolidFire VAG
+- Get SF volumes, get disks from Windows hosts
+- Loop through all that stuff and look for matches
+- Output
+  - Table with a list of SF volumes and any matching Windows volumes and mount points on the Windows host(s)
+
+- `Get-Disk`: filter by `ven_solidfir` in `Path`, then use `UniqueId` to map SolidFire Volumes to Windows disks; part of `Path` value (`{53f56307-b6bf-11d0-94f2-00a0c91efb8b}`) ties Disks to Partitions
+
+```raw
+UniqueId           : 6F47ACC1000000006D6E3479000000A7
+Number             : 1
+Path               : \\?\mpio#disk&ven_solidfir&prod_ssd_san&rev_0001#1&7f6ac24&0&3646343741434331303030303030303036443645333437393030303030304137#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}
+Manufacturer       : SolidFir
+Model              : SSD SAN
+```
+
+- `Get-Volume`: `UniqueId` to map Volume to Partition (below)
+
+```raw
+ObjectId             : {1}\\WIN1\root/Microsoft/Windows/Storage/Providers_v2\WSP_Volume.ObjectId="{9b9a32ce-d6a6-11e9-bbec-806e6f6e6963}:VO:\\?\Volume{3987bdfb-2311-4adc-be16-eddcb97515eb}\"
+PassThroughClass     :
+PassThroughIds       :
+PassThroughNamespace :
+PassThroughServer    :
+UniqueId             : \\?\Volume{3987bdfb-2311-4adc-be16-eddcb97515eb}\
+```
+
+- `Get-Partition`: `UniqueId` maps to UniqueId from `Get-Disk`; `Guid` is contained in `UniqueId` from `Get-Volume` output for the volume. And `DriveLetter`, obviously, is what we're after.
+
+```raw
+UniqueId             : {00000000-0000-0000-0000-000100000000}6F47ACC1000000006D6E3479000000A7
+AccessPaths          : {E:\, \\?\Volume{3987bdfb-2311-4adc-be16-eddcb97515eb}\}
+DiskNumber           : 1
+DiskPath             : \\?\mpio#disk&ven_solidfir&prod_ssd_san&rev_0001#1&7f6ac24&0&3646343741434331303030303030303036443645333437393030303030304137#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}
+DriveLetter          : E
+Guid                 : {3987bdfb-2311-4adc-be16-eddcb97515eb}
+...
+IsOffline            : False
+IsReadOnly           : False
+IsShadowCopy         : False
+...
+OperationalStatus    : Online
+```
+
+We can match use `Get-Disk` and `Get-Partition` via `UniqueId` values. In `Get-Partition` output look for `DiskPath` that contains `ven_solidfir`, output all SolidFire volumes visible to the host, and separately list:
+
+- Offline partitions
+- Online partitions without assigned DriveLetter
+- Online, partitioned and with DriveLetter
+- UniqueId's from `Get-Disk` that aren't Volumes (and therefore Partitions), would be SolidFire volumes presented to the host(s) but [not used](https://github.com/scaleoutsean/awesome-solidfire/blob/master/scripts/find_disconnected_volumes.ps1) - we can't automatically assume those are junk, because in theory at least those could be volumes that we logged out from in order to use fewer iSCSI connections, for example.
+
+### Automate host-side volume operations
+
+You can use [PSDiskPart](https://github.com/RamblingCookieMonster/PSDiskPart) for that.
 
 ## Monitoring
 
