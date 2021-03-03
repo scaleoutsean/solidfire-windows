@@ -159,7 +159,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Configure SolidFire storage
   - Create SolidFire cluster
   - Create DNS entries for SolidFire cluster (management interfaces, IPMI, out-of-band SolidFire management node ("mNode"))
-    - SolidFire mMnode can be installed from an ISO that you can download from Downloads at NetApp.com. Installation guide: work by NetApp Hybrid Cloud Control [how-to](https://docs.netapp.com/us-en/hci/docs/task_mnode_install.html), just skip the vCenter part if you're installing in a Windows Hyper-V environment that doesn't have vCenter
+  - SolidFire mMnode can be installed from an ISO that you can download from Downloads at NetApp.com. Installation guide: work by NetApp Hybrid Cloud Control [how-to](https://docs.netapp.com/us-en/hci/docs/task_mnode_install.html), just skip the vCenter part if you're installing in a Windows Hyper-V environment that doesn't have vCenter. NOTE: as of early 2021 mNode requires 24 GB RAM and on Hyper-V RAM should be fully provisioned otherwise you may not be able to boot the VM
   - Point Solidire and mNode NTP client to Windows ADS (primary and secondary) and if Internet is reachable from SolidFire management network, at least one public NTP server (public NTP servers may ocassionally time out which is harmless)
   - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, cluster Management Virtual IP, hardware BMC IP, out-of-band mNode IP; preferrably use Active Directory Certification Authority and DNS FQDNs rather than DIY OpenSSL stuff)
     - Sometimes it's suitable to keep infrastture management hosts on a separate network and subdomain (`Add-DnsServerPrimaryZone -Name infra.netapp.io`)
@@ -294,7 +294,10 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ## Microsoft Windows on NetApp HCI Compute Nodes with RAID1 system volume
 
+Both H410C and H615C come with Intel RSTe (VROC) which is supported by request (get your NetApp account team sort it out). Once RSTe is configured and used, do not reset your BIOS or wipe SMBIOS on BIOS update.
+
 - H410C and H615C systems may have the ability to configure Intel VROC (RSTe) with sSATA drives (depending on the OS and version). Users interested in this option should inquire with their NetApp representative
+  - H410C with BIOS version 3.4: Advanced > PCH SATA Configuration > Configure SATA as [AHCI], then in SATA RSTe and RAID options appear in menu
 
 ## NetApp Active IQ OneCollect
 
