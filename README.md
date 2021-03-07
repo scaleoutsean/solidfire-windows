@@ -58,6 +58,11 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - Use one teamed interface with two vEthernet NICs for ManagementOS, set up one connection from each vEthernet interface's IP address
     - Use Windows Network Controller (available only in Windows Server [Datacenter Edition](https://docs.microsoft.com/en-us/windows-server/get-started-19/editions-comparison-19))
 
+### Windows Server 2016, 2019, and 2022
+
+- Windows Server 2016 and 2019 are officially supported
+- Windows Server 2022 Preview Build 20303 with Hyper-V has been touch-tested with SolidFire 12.2. In terms of making use of SolidFire iSCSI t argets, it does not seem different compared to Windows Server 2019. Containers/Kubernetes have not been tested.
+
 ## Host and Guest Configuration Notes
 
 ### Networking

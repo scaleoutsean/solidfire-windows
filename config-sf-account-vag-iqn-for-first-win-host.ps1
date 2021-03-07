@@ -22,7 +22,7 @@ Get-Service -Name msiscsi
 Set-Service -Name msiscsi -StartupType Automatic
 Start-Service msiscsi
 $WinInitiator = (Get-InitiatorPort).NodeAddress  # note there could be multiple (if not teamed)
-$WinNics = (Get-NetIPAddress –AddressFamily IPv4 -InterfaceAlias iscsi*) # there could be multiple (iscsi1, iscsi2) if not teamed
+$WinNics = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias iscsi*) # there could be multiple (iscsi1, iscsi2) if not teamed
 
 New-IscsiTargetPortal -TargetPortalAddress $SFSvip
 
