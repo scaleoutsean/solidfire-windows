@@ -6,6 +6,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - [solidfire-windows: Notes on Microsoft Windows with NetApp SolidFire](#solidfire-windows-notes-on-microsoft-windows-with-netapp-solidfire)
   - [General Notes](#general-notes)
+    - [Windows Server 2016, 2019, and 2022](#windows-server-2016-2019-and-2022)
   - [Host and Guest Configuration Notes](#host-and-guest-configuration-notes)
     - [Networking](#networking)
     - [iSCSI](#iscsi)
@@ -52,7 +53,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Multiple connections from one iSCSI client to single volume (with or without MPIO) are rarely needed (NetApp AFF and E-Series are more suitable for one or few large workloads)
   - Network adapter teaming (bonding) creates one path per volume and provides link redundancy, which is enough for 90% of use cases
   - It is not possible to establish two connections (sessions) to the same volume with only one initiator IP
-  - Thre are several ways to create two iSCSI connections to a SolidFire volume. They require Multipath I/O and one of the following (not a complete list):
+  - There are several ways to create two iSCSI connections to a SolidFire volume. They require Multipath I/O and one of the following (not a complete list):
     - Use four NICs to create two teams on the same network, set up one connection from each adapter team's IP address
     - Use two non-teamed NICs on the same network, set up one connection from each interface's IP address
     - Use one teamed interface with two vEthernet NICs for ManagementOS, set up one connection from each vEthernet interface's IP address
