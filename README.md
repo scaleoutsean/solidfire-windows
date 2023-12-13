@@ -254,9 +254,11 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Rethin (Unmap) Unused Filesystem Blocks
 
-- Whether inside of Windows VMs or on the management OS, sdelete (on Linux, fstrim) may be used to periodically zero-out empty space
-- If you create a schedule, try to randomize run times so that you don't kick it off for a bunch of VMs at the same time
+- Newer Windows have TRIM/UNMAP enabled by default, and Hyper-V passes through any UNMAP requests from guests, as long as guests are enabled, nothing has to be done
+- For older Windows VMs or on the management OS, SDelete may be used to periodically zero-out empty space. On Linux, use `fstrim`.
+- If you create a schedule to periodically run SDelete or fstrim, try to randomize run times so that you don't kick it off for a bunch of VMs at the same time
 - SolidFire reclaims unmapped capacity periodically so it may take an hour or so to notice effects of this operation
+- See [this blog post](https://scaleoutsean.github.io/2023/12/12/solidfire-unmap-hyper-v.html) with notes related to UNMAP on Windows 11 and similarly old Windows Server products
 
 ### Dealing with Unused Volumes
 
