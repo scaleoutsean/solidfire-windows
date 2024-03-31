@@ -6,7 +6,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - [solidfire-windows: Notes on Microsoft Windows with NetApp SolidFire](#solidfire-windows-notes-on-microsoft-windows-with-netapp-solidfire)
   - [General Notes](#general-notes)
-    - [Windows Server 2016, 2019, and 2022](#windows-server-2016-2019-and-2022)
+    - [Windows Server 2016, 2019, 2022, 2025](#windows-server-2016-2019-2022-2025)
   - [Host and Guest Configuration Notes](#host-and-guest-configuration-notes)
     - [Networking](#networking)
     - [iSCSI](#iscsi)
@@ -49,7 +49,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - Each SolidFire volume is available on one network (subnet and VLAN). Different targets may be served over multiple networks and VLANs when SolidFire uses Trunk Mode switch ports.
   - iSCSI clients connect to SolidFire portal - Storage Virtual IP (SVIP) - which redirects each to the SolidFire node which hosts the target (volume) of interest (iSCSI login redirection is described in [RFC-3720](https://tools.ietf.org/html/rfc3720))
-  - Volumes are ocassionally rebalanced, transparently to the client
+  - Volumes are occasionally rebalanced, transparently to the client
 - Multiple connections from one iSCSI client to single volume (with or without MPIO) are rarely needed (NetApp AFF and E-Series are more suitable for one or few large workloads)
   - Network adapter teaming (bonding) creates one path per volume and provides link redundancy, which is enough for 90% of use cases
   - It is not possible to establish two connections (sessions) to the same volume with only one initiator IP
@@ -59,10 +59,11 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - Use one teamed interface with two vEthernet NICs for ManagementOS, set up one connection from each vEthernet interface's IP address
     - Use Windows Network Controller (available only in Windows Server [Datacenter Edition](https://docs.microsoft.com/en-us/windows-server/get-started-19/editions-comparison-19))
 
-### Windows Server 2016, 2019, and 2022
+### Windows Server 2016, 2019, 2022, 2025
 
 - Windows Server 2016 and 2019 are officially supported
-- Windows Server 2022 Preview Build 20303 with Hyper-V has been touch-tested with SolidFire 12.2. In terms of making use of SolidFire iSCSI t argets, it does not seem different compared to Windows Server 2019. Containers/Kubernetes have not been tested.
+- Windows Server 2022 Preview Build 20303 with Hyper-V has been touch-tested with SolidFire 12.2. In terms of making use of SolidFire iSCSI targets, it does not seem different compared to Windows Server 2019. Containers/Kubernetes have not been tested.
+- Windows Server 2025 Preview Build 26085.1 - has been touch [tested] with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise.
 
 ## Host and Guest Configuration Notes
 
@@ -77,7 +78,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - DNS and NETBIOS registration on iSCSI and Live Migration network(s)
 - It may be more convenient to combine 2 or 4 Mellanox NICs into 1 or 2 LACP Teams, and use Trunk Mode on network switch ports and VLANs on VMSwitch (to segregate workloads and tenants)
 - Some network and other configuration changes may require Windows to be restarted although it won't prompt you, so if some configuration changes don't take effect, either check the documentation or reboot the server to see if that helps
-- It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is reccommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
+- It appears light and moderate workloads don't require any tuning on iSCSI client (even Jumbo Frames, although that is recommended and a semi-hard requirement on the SolidFire/NetApp HCI side)
 - It is practically mandatory to use Trunk Mode on 10/25 GigE because in all likelihood you'll need more than one VLAN for iSCSI, backup and other purposes. Mellanox ONYX (SN2010, SN2100, SN2700) has a variant of it called Hybrid Mode
 - In non-Hyper-V (i.e. non-virtualized) Windows environments, two or more network cables can be Teamed in Trunk Mode (see this [Mellanox article](https://community.mellanox.com/s/article/howto-configure-multiple-vlans-on-windows-2012-server)) to provide VLAN-based segregation between iSCSI, workload and other traffic
 
@@ -99,7 +100,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Maximum SolidFire volume performance depends on the I/O request sizes and read-write ratio but it tends to be somewhere between traditional flash storage and virtualized distributed flash storage
 - In the case of very large volumes or very busy workloads (e.g. sustained 30,000 IOPS or 300 MB/s) striped Dynamic Volumes may be used to spread I/O over several volumes, although they have some limitations (in terms of manageability on Windows, for example backup and restore). Don't unnecessarily complicate things
 - Another way to spread the workload is to spread single VM's disks over several different (Cluster Shared or other) SolidFire volumes. This helps if the workload isn't concentrated on one hot file (in which case striped Dynamic Volumes can be used)
-- The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no anectodal evidence so this should be confirmed in practice through testing. There are various practices for SQL Server (based on type of SQL data (DB, log, etc.) and use case (OLTP, OLAP, etc) so you can split such workloads across disks with different properties
+- The (Default) 4kB NTFS block size ought to work best in terms of efficiency, but there is no anecdotal evidence so this should be confirmed in practice through testing. There are various practices for SQL Server (based on type of SQL data (DB, log, etc.) and use case (OLTP, OLAP, etc) so you can split such workloads across disks with different properties)
 - Microsoft does not support Windows Storage Spaces with iSCSI storage. They can be configured with SolidFire and work similarly to striped Dynamic Volumes, although with Storage Spaces strips are wider and you're essentially on your own as far as Support is concerned
 
 ### Hyper-V
@@ -114,6 +115,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - Deploy SolidFire PowerShell Tools for Windows on your management VM. It is recommended to use SolidFire PowerShell Tools for Microsoft PowerShell 5.1: `Install-Module -Name SolidFire  -Scope CurrentUser`. If PowerShell 6 (or 7) is desired, consider using PowerShell Tools 1.6 (download from NetApp Support Site > Tools section as that version is not in PowerShell Gallery)
 - Install SolidFire VSS Hardware Provider for Windows Server 2019 and 2016 on your Hyper-V hosts (and VMs, if you have them configured to directly access iSCSI)
+  - SQL Server 2022 doesn't need VSS, it works with [generic hardware snapshots](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html#sql-server-t-sql-snapshots-and-solidfire-volume-snapshots) and SolidFire supports consistency groups
 - SolidFire is easy to automate (`New-SFVolume`, `Add-SFVolumeToVolumeAccessGroup`, after you've set up cluster, added iSCSI initiators and created QoS policies and Volume Access Groups; to remove a volume from Hyper-V CSVs you'd remove it from WFC and OS as per usual procedures for iSCSI devices, remove it from VAG (`Remove-SFVolumeFromVolumeAccessGroup`) and then delete it (`Remove-SFVolume`), assuming it didn't have replication or SnapMirror relationships in place
 - It's possible to automate SolidFire with Terraform or Ansible, but unless one already uses (or wants to use) these tools it's easy enough to put together a custom PowerShell script that works for your needs
 
@@ -148,8 +150,8 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Deploy Windows hosts
   - Install base OS (Windows Server 2019 Datacenter Edition, for example)
   - Install drivers, plugins, modules, etc.
-    - Solidfire VSS Hardware Provider v2 (only on Hyper-V hosts)
-    - SolidFire PowerShell Tools 1.5.1 or newer for Microsoft PowerShell 5.1 (management clients only)
+    - Solidfire VSS Hardware Provider v2 (only on Hyper-V hosts). Note that SQL Server 2022 can [use T-SQL](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html#sql-server-t-sql-snapshots-and-solidfire-volume-snapshots) with hardware snapshots
+    - SolidFire PowerShell Tools 1.5.1 or newer for Microsoft PowerShell 5.1 (management clients only). Use SolidFire Core with PowerShell 7.
     - Drivers (NetApp HCI H41C node needs one for Mellanox and two for Intel - see Drivers section)
   - Install required Windows features (Multipath I/O, Failover-Cluster, etc.) on Hyper-V hosts
   - Update OS and reboot (you may need to do that more than once)
@@ -380,7 +382,7 @@ Both H410C and H615C come with Intel RSTe (VROC) which is supported by request (
 
 ## Scripts for NetApp HCI and SolidFire storage for Microsoft Windows
 
-This section focuses on iSCSI initiator- and storage-related scripts and commands. It will not cover generic Windows configuration which can vary wildly and is impossible to code, let alone maintain
+This section focuses on iSCSI initiator- and storage-related scripts and commands. It will not cover generic Windows configuration which can vary wildly and is impossible to code but for the few basic scenarios, let alone maintain.
 
 ### Start Windows iSCSI Initiator and Create storage account(s), Volumes, VAG and register IQN(s) on SolidFire
 
@@ -397,7 +399,34 @@ This section focuses on iSCSI initiator- and storage-related scripts and command
 
 This script takes about 10 seconds to run. After that you can repeat host-related steps on another server. You don't want to create another account or VAG in subsequent runs unless you have multiple clusters.
 
-After you're done can create MPIO configuration for iSCSI, get iSCSI targets and start using them. As mentioned earlier, add the nodes to ADS (if you'll use it), finalize network configuration and form a cluster *before* you configure iSCSI storage for it. Do not configure iSCSI storage if you plan to continue to mess arround with Hyper-V hosts.
+After you're done can create MPIO configuration for iSCSI, get iSCSI targets and start using them. As mentioned earlier, add the nodes to ADS (if you'll use it), finalize network configuration and form a cluster *before* you configure iSCSI storage for it. Do not configure iSCSI storage if you plan to continue to mess around with Hyper-V hosts.
+
+**NOTE:** I can't emphasize enough how helpful it is to have - if your practices allow it - SolidFire volume names (`SFVolNamePattern`, in the script) consistent with Windows' volume labels. It doesn't have to be one pattern - you can have a bunch of different names in a list or a hashtable - but as long as those are consistent, a lot of scripts will be easy. 
+
+With a consistent volume-to-label mapping you're just a few lines (ok, maybe closer to 100) away from avoiding a nightmare.
+
+```pwsh
+PS C:\> (Get-SFVolume -AccountID 13) | Select-Object -Property Name,Iqn, VolumeID          
+
+Name  Iqn                                      VolumeID
+----  ---                                      --------
+win1  iqn.2010-01.com.solidfire:wcwb.win1.134       134
+win2  iqn.2010-01.com.solidfire:wcwb.win2.135       135
+sqldb iqn.2010-01.com.solidfire:wcwb.sqldb.136      136
+
+PS C:\> (Get-IscsiSession | `n
+        Where-Object -Property TargetNodeAddress -CMatch "iqn.2010-01.com.solidfire").TargetNodeAddress                                    
+iqn.2010-01.com.solidfire:wcwb.win2.135
+iqn.2010-01.com.solidfire:wcwb.win1.134
+iqn.2010-01.com.solidfire:wcwb.sqldb.136
+
+```
+
+From there, use Windows iSCSI control panel to assign fixed drives to iSCSI volumes. Unfortunately it won't let you assign them individually, but "en masse". I haven't tested how they behave if a volume is removed and another added (I assume it would pick the drive letter of the removed volume).
+
+Now consider the hell of figuring out the mess below without that mapping (scroll down). It [can be done](https://4sysops.com/archives/match-physical-drives-to-volume-labels-with-powershell/), but it is a choice between maintaining your volume (SolidFire) volume and Windows (label) mapping vs. maintaining a complex automated mapping scripts so that they don't break if something minor in PowerShell breaks or changes.
+
+In a large environment I'd probably have a proper sandbox and wouldn't mind to maintain a complex script. In a smaller environment, I'd ensure naming consistency. The latter has another burden, but it's always like that - in that when you clone or change things, you need to mind SolidFire volume names or you may confuse yourself at the front end (or your scripts that map between the two may get confused).
 
 ### Map SolidFire to Windows volumes
 
