@@ -61,9 +61,9 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Windows Server 2016, 2019, 2022, 2025
 
-- Windows Server 2016 and 2019 are officially supported
+- Windows Server 2016 and 2019 are officially supported.
 - Windows Server 2022 Preview Build 20303 with Hyper-V has been touch-tested with SolidFire 12.2. In terms of making use of SolidFire iSCSI targets, it does not seem different compared to Windows Server 2019. Containers/Kubernetes have not been tested.
-- Windows Server 2025 Preview Build 26085.1 - has been touch [tested] with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise.
+- Windows Server 2025 Preview Build 26085.1 - has been touch [tested](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html) with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise.
 
 ## Host and Guest Configuration Notes
 
