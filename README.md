@@ -245,7 +245,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 ### Storage Clones
 
 - Clones have to be created from existing volumes or snapshots (asynchronous operation), few of which can run in parallel (`New-SFClone`, refer to Element API documentation for details)
-- Like with most other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from a clone and resignature (assign a different Volume ID) the volume, and then use SolidFire API or GUI to re-assign the volume to a Hyper-V VAG (or other host (group))
+- Like with most other block storage systems it is best to create a dedicated iSCSI client (a VM would do) that can remove read flag from a clone using dispart and resignature (assign a different Volume ID) the volume, and then use SolidFire API or GUI to re-assign the volume to a Hyper-V VAG (or other host (group))
 - Note that it is possible to "resync" one volume to another, so if you need to update a large clone that differs by just a couple of GB, check out `Copy-SFVolume` - it can help you significantly speed up clone refresh operation
 - As mentioned above, have clear naming rules to avoid confusion due to duplicate volume names
 
@@ -281,7 +281,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - DC1: `iqn.2010-01.com.solidfire:ozv4.sql3.8` - Cluster ID `ozv4`, Volume `sql3`, Volume ID `8`
   - DC2: `iqn.2010-01.com.solidfire:dro1.drsql3.27` - Cluster ID `dro1`, Volume `drsql3`, Volume ID `27`
   - `iqn.2010-01.com.solidfire:` is fixed, the rest is `<ClusterUniqueID>.<VolumeName>.<VolumeID>`
-- Search, replace, rescan and connect accordingly
+- Search, replace, re-scan and connect accordingly
 
 ### Using SolidFire Object Attributes
 
@@ -424,9 +424,11 @@ iqn.2010-01.com.solidfire:wcwb.sqldb.136
 
 From there, use Windows iSCSI control panel to assign fixed drives to iSCSI volumes. Unfortunately it won't let you assign them individually, but "en masse". I haven't tested how they behave if a volume is removed and another added (I assume it would pick the drive letter of the removed volume).
 
-Now consider the hell of figuring out the mess below without that mapping (scroll down). It [can be done](https://4sysops.com/archives/match-physical-drives-to-volume-labels-with-powershell/), but it is a choice between maintaining your volume (SolidFire) volume and Windows (label) mapping vs. maintaining a complex automated mapping scripts so that they don't break if something minor in PowerShell breaks or changes.
+Now consider the hell of figuring out the mess below without that mapping (scroll down). It [can be done](https://4sysops.com/archives/match-physical-drives-to-volume-labels-with-powershell/), but it is a choice between maintaining your volume (SolidFire) volume and Windows (label) mapping vs. maintaining a complex automated mapping scripts so that they don't break if something minor in PowerShell breaks or changes. Another example can be found in this repo, under SolidFireDbaTools. 
 
-In a large environment I'd probably have a proper sandbox and wouldn't mind to maintain a complex script. In a smaller environment, I'd ensure naming consistency. The latter has another burden, but it's always like that - in that when you clone or change things, you need to mind SolidFire volume names or you may confuse yourself at the front end (or your scripts that map between the two may get confused).
+In a large environment I'd probably have a proper sandbox and wouldn't mind to maintain a complex script. In a smaller environment, I'd ensure naming consistency. 
+
+The latter has another burden, but it's always like that - in that when you clone or change things, you need to mind SolidFire volume names or you may confuse yourself at the front end (or your scripts that map between the two may get confused).
 
 ### Map SolidFire to Windows volumes
 
@@ -441,6 +443,8 @@ An enhanced version might do the following:
 - Loop through all that stuff and look for matches
 - Output
   - Table with a list of SF volumes and any matching Windows volumes and mount points on the Windows host(s)
+
+Check out the module in SolidFireDbaTools directory which maps SQL instances to SolidFire Volume IDs for an example.
 
 - `Get-Disk`: filter by `ven_solidfir` in `Path`, then use `UniqueId` to map SolidFire Volumes to Windows disks; part of `Path` value (`{53f56307-b6bf-11d0-94f2-00a0c91efb8b}`) ties Disks to Partitions
 
