@@ -511,4 +511,4 @@ A: No. While some of this may be correct, please refer to the official documenta
 ## License and Trademarks
 
 - NetApp, SolidFire and other marks are owned by NetApp, Inc. Other marks may be owned by their respective owners.
-- See [LICENSE](LICENSE).
+- See [LICENSE](LICENSE). Some subdirectories may have a different license for files contained in those directories.
