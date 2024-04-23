@@ -434,13 +434,15 @@ The latter has another burden, but it's always like that - in that when you clon
 
 This is a frequently needed task, to see what volume is mapped (or not) to a Windows iSCSI client. There's a script (win_SF_identify_vols.ps1) located [here](https://github.com/scaleoutsean/SF-scripts) that works for the most part (but fails in minor ways.) I can't write a new one at the moment, but you can give it a try.
 
+There's another one [here](https://github.com/sstorholm/Windows-iSCSI-Enumerator), which worked correctly in one instance where I tried it. It doesn't give you SolidFire volume IDs, but those can be easily derived from iSCSI target names.
+
 An enhanced version might do the following:
 
 - Inputs
   - SolidFire MVIP and a list of Windows hosts
   - List of SolidFire volumes or SolidFire storage account or SolidFire VAG
 - Get SF volumes, get disks from Windows hosts
-- Loop through all that stuff and look for matches
+- Loop through that stuff and look for matches
 - Output
   - Table with a list of SF volumes and any matching Windows volumes and mount points on the Windows host(s)
 
