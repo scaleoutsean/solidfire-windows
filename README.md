@@ -13,6 +13,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - [Multipath I/O](#multipath-io)
     - [Disks](#disks)
     - [Hyper-V](#hyper-v)
+    - [WSL](#wsl)
     - [Automation](#automation)
     - [Direct VM Access to iSCSI targets](#direct-vm-access-to-iscsi-targets)
     - [Monitoring, Backup and other Integrations](#monitoring-backup-and-other-integrations)
@@ -110,7 +111,11 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Re-check Hyper-V Live Migration settings - make sure iSCSI and Management networks have lowest preference for Live Migration
 - You may want to make sure that SMB3 works if you set Hyper-V to use it for Live Migration (refer to various Windows documentation)
 - If you have only [Gen 2](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/plan/should-i-create-a-generation-1-or-2-virtual-machine-in-hyper-v) VMs, you may create SolidFire volumes with 4kB rather than emulated 512b sectors (`-Enable512e:$False`). Potentially consolidate Gen 1 VMs on a handful of dedicated volumes with 512 byte emulation
-  
+
+### WSL
+
+- In WSL from 2024 and later, you may use `wsl --manage <distro> --set-sparse true` to enable automatic storage space reclaim
+
 ### Automation
 
 - Deploy SolidFire PowerShell Tools for Windows on your management VM. It is recommended to use SolidFire PowerShell Tools for Microsoft PowerShell 5.1: `Install-Module -Name SolidFire  -Scope CurrentUser`. If PowerShell 6 (or 7) is desired, consider using PowerShell Tools 1.6 (download from NetApp Support Site > Tools section as that version is not in PowerShell Gallery)
@@ -132,7 +137,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - If Veeam runs from within a VM, VMSwitch settings can be used to reserve minimum and limit maximum bandwidth on Veeam network(s) used by backup server
   - If Veeam BR uses SolidFire storage, it may be a good idea to keep Veeam BR VM on its own CSV to eliminate the impact of write-heavy workload on other VMs. For non-Edge environments, attach Veeam VMs to external storage such as E-Series
   - Veeam BR PowerShell can import SolidFire (or SolidFire.Core, for PowerShell is v6+) module for automation and customization of backup and restore jobs
-- See [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire) for general information about various SolidFire integrations
+- See [awesome-solidfire](https://github.com/scaleoutsean/awesome-solidfire) for general information about various SolidFire monitoring and reporting integrations and scripts (some in PowerShell)
 
 ## Application Notes
 
