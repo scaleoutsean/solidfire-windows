@@ -18,6 +18,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - [Direct VM Access to iSCSI targets](#direct-vm-access-to-iscsi-targets)
     - [Monitoring, Backup and other Integrations](#monitoring-backup-and-other-integrations)
   - [Application Notes](#application-notes)
+    - [VSS and SQL Server 2022](#vss-and-sql-server-2022)
   - [Generic workflow for Hyper-V Clusters with NetApp SolidFire](#generic-workflow-for-hyper-v-clusters-with-netapp-solidfire)
   - [Hyper-V and Storage Administration](#hyper-v-and-storage-administration)
     - [Security](#security)
@@ -64,7 +65,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - Windows Server 2016 and 2019 are officially supported.
 - Windows Server 2022 Preview Build 20303 with Hyper-V has been touch-tested with SolidFire 12.2. In terms of making use of SolidFire iSCSI targets, it does not seem different compared to Windows Server 2019. Containers/Kubernetes have not been tested.
-- Windows Server 2025 Preview Build 26085.1 - has been touch [tested](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html) with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise.
+- Windows Server 2025 Preview Build 26085.1 - has been touch [tested](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html) with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise. Also [Build 26100.4061](https://scaleoutsean.github.io/2025/05/22/windows-2025-netapp-solidfire.html) (May 2025).
 
 ## Host and Guest Configuration Notes
 
@@ -145,6 +146,10 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - There are various best practices for SQL Server, but that is a topic in itself and there's a NetApp TR that deals with it. You may split DB workloads across VM disks and SolidFire disks with same or different (e.g for data & logs) QoS properties
 - High Availability: consider storing VM OS disks on CSVs but store data on directly accessed SolidFire iSCSI volumes (which requires slightly more account management on SolidFire as you'd have one account or one Volume Access Group per such HA application, so you may put "light" HA apps on CSVs and rely on VM failover, to find a good balance between manageability, availability and performance)
 
+### VSS and SQL Server 2022
+
+Note that since SQL Server 2022 VSS hardware provider is no longer necessary for T-SQL snapshots. Find more on that [here](https://scaleoutsean.github.io/2024/04/01/windows-server-2025-with-solidfire-part-two-sql-server-2022.html)
+
 ## Generic workflow for Hyper-V Clusters with NetApp SolidFire
 
 - Analyze all requirements (availability, security, performance, networking...)
@@ -204,7 +209,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ## Hyper-V and Storage Administration
 
-- Highly recommended: come up with naming rules (including for clones and remote copies, if aplicable) for SolidFire Windows and CSV Volumes and (SolidFire) Snapshots
+- Highly recommended: come up with naming rules (including for clones and remote copies, if applicable) for SolidFire Windows and CSV Volumes and (SolidFire) Snapshots
 
 ### Security
 
@@ -223,20 +228,20 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 - Note that Admin Center can add Hyper-V clusters and individual servers; you may want to add a Hyper-V cluster (which adds the members as well)
 - At this time, a Hyper-V storage management workflow in Windows Admin Center might look like this:
   - Prepare PowerShell scripts for operations you perform more frequently (e.g. Add, Remove, Resize, and Clone) and keep them on one or two Hyper-V hosts (or simply on Admin's network share)
-  - When one of these operations need to be perofrmed, use Admin Center to start a browser-based remote PowerShell session from a Hyper-V host, and execute the PowerShell script(s)
-  - Then navigate to other parts of Admin Center (view CSVs, create VMs, etc.)
+  - When one of these operations need to be performed, use Admin Center to start a browser-based remote PowerShell session from a Hyper-V host, and execute the PowerShell script(s)
+  - Then navigate to other parts of Admin Center (view CSVs, create VMs, etc.), although you can create them from the same PowerShell scripts you used to create or edit SolidFire volumes
 - Note that Admin Center cannot be installed on Active Directory Domain Controller so maybe find a "management workstation" that can be used for that
-- Hyper-V cluster capacity and performance can be monitored through Admin Center dashboards; if you'd like to monitor it from elsewhere, consider the gratis or commercial version of NetApp Cloud Insights
+- Hyper-V cluster capacity and performance can be monitored through Admin Center dashboards; if you'd like to monitor it from elsewhere, consider the gratis or commercial version of NetApp Cloud Insights, or [SolidFire Collector](https://github.com/scaleoutsean/sfc)
 
 ### Create and Remove Volumes
 
-- `New-SFVolume` (pay special attention to volume naming, because in SolidFire you can have duplicate volume names; VolumeID's would be different, of course)
+- `New-SFVolume` (pay special attention to volume naming, because in SolidFire you can create duplicate volume names if you want to, but that ought to be avoided; VolumeID's would always be different, of course)
 - Perform iSCSI target rescan, login to new target on all Hyper-V servers (you may want to use `-IsPersistent:$True`)
-- On one host, bring the new disk online, intialize it and create a filesystem (NTFS seems like best choice for SolidFire environments and use cases)
+- On one host, bring the new disk online, initialize it and create a filesystem (NTFS seems like best choice for SolidFire environments and use cases)
 - Add the disk to Hyper-V cluster
 - Optionally, convert the cluster disk to CSV
 - Optionally, rename new CSV
-- The removal would work in reverse; remove or migrate the VMs prior to disk being reoved from Hyper-V, reset and ultimately deleted on SolidFire (it can be undeleted unless it gets manually purged or naturally expires (4 hours later))
+- The removal would work in reverse; remove or migrate the VMs prior to disk being removed from Hyper-V, reset and ultimately deleted on SolidFire (it can be undeleted unless it gets manually purged or naturally expires (4 hours later))
 
 ### Storage Snapshots
 
@@ -281,12 +286,23 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 ### Switch (Failover) to SolidFire Cluster with Replica Volumes
 
-- Each SolidFire volume contains at least two details unique to that cluster, the cluster string and volume ID, as well as some other stuff (see in your iSCSI Intitiator Control Panel)
+- Each SolidFire volume contains at least two details unique to that cluster, the cluster string and volume ID, as well as some other stuff (see in your iSCSI Initiator Control Panel)
 - Example: volume sql3 from DC1 replicated to volume drsql3 in DC2
   - DC1: `iqn.2010-01.com.solidfire:ozv4.sql3.8` - Cluster ID `ozv4`, Volume `sql3`, Volume ID `8`
   - DC2: `iqn.2010-01.com.solidfire:dro1.drsql3.27` - Cluster ID `dro1`, Volume `drsql3`, Volume ID `27`
-  - `iqn.2010-01.com.solidfire:` is fixed, the rest is `<ClusterUniqueID>.<VolumeName>.<VolumeID>`
+  - `iqn.2010-01.com.solidfire:` is the same for all SolidFire clusters, the rest is cluster- and volume-dependent: `<ClusterUniqueID>.<VolumeName>.<VolumeID>`
 - Search, replace, re-scan and connect accordingly
+- SolidFire API and tooling make such operations very easy, for example it takes just 2 lines to remove replication pairing (i.e. when falling back to the original site) and turn the volume from replication target to write mode. Assuming your primary site has volumes 1 and 2, when falling back from DR site, reverse replication direction from DR->PROD and once volumes 54 and 32 are synced, fail back to PROD. Don't forget to also remove replication settings on DR site, and change volumes 54 and 32 to replicationTarget if you resume normal replication from PROD to DR after fail back.
+
+
+```powershell
+$replicaPairs = @((1,54), (2,32))
+foreach ($pair in $replicaPairs) { 
+  Write-Host "Working on volume ID from PROD:", $pair[0]
+  Remove-SFVolumePair -VolumeID $pair[0] -Confirm:$false
+  Get-SFVolume -VolumeID $pair[0] | Set-SFVolume -Access readWrite -Confirm:$False
+}
+```
 
 ### Using SolidFire Object Attributes
 
