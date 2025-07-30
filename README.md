@@ -124,6 +124,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - SQL Server 2022 doesn't need VSS, it works with [generic hardware snapshots](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html#sql-server-t-sql-snapshots-and-solidfire-volume-snapshots) and SolidFire supports consistency groups
 - SolidFire is easy to automate (`New-SFVolume`, `Add-SFVolumeToVolumeAccessGroup`, after you've set up cluster, added iSCSI initiators and created QoS policies and Volume Access Groups; to remove a volume from Hyper-V CSVs you'd remove it from WFC and OS as per usual procedures for iSCSI devices, remove it from VAG (`Remove-SFVolumeFromVolumeAccessGroup`) and then delete it (`Remove-SFVolume`), assuming it didn't have replication or SnapMirror relationships in place
 - It's possible to automate SolidFire with Terraform or Ansible, but unless one already uses (or wants to use) these tools it's easy enough to put together a custom PowerShell script that works for your needs
+- See [this](https://scaleoutsean.github.io/2025/07/26/solidfire-windows-admin-center-gateway.html) and [this](https://scaleoutsean.github.io/2025/07/30/solidfire-windows-admin-center-extension.html) post for some approaches for improving RBAC/ABAC in Windows environments
 
 ### Direct VM Access to iSCSI targets
 
