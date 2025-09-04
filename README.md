@@ -22,7 +22,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
   - [Generic workflow for Hyper-V Clusters with NetApp SolidFire](#generic-workflow-for-hyper-v-clusters-with-netapp-solidfire)
   - [Hyper-V and Storage Administration](#hyper-v-and-storage-administration)
     - [Security](#security)
-    - [Windows Admin Center](#windows-admin-center)
+    - [Windows Admin Center (WAC)](#windows-admin-center-wac)
     - [Create and Remove Volumes](#create-and-remove-volumes)
     - [Storage Snapshots](#storage-snapshots)
     - [Storage Clones](#storage-clones)
@@ -179,8 +179,8 @@ Note that since SQL Server 2022 VSS hardware provider is no longer necessary for
   - Create SolidFire cluster
   - Create DNS entries for SolidFire cluster (management interfaces, IPMI, out-of-band SolidFire management node ("mNode"))
   - SolidFire mMnode can be installed from an ISO that you can download from Downloads at NetApp.com. Installation guide: work by NetApp Hybrid Cloud Control [how-to](https://docs.netapp.com/us-en/hci/docs/task_mnode_install.html), just skip the vCenter part if you're installing in a Windows Hyper-V environment that doesn't have vCenter. NOTE: as of early 2021 mNode requires 24 GB RAM and on Hyper-V RAM should be fully provisioned otherwise you may not be able to boot the VM
-  - Point Solidire and mNode NTP client to Windows ADS (primary and secondary) and if Internet is reachable from SolidFire management network, at least one public NTP server (public NTP servers may ocassionally time out which is harmless)
-  - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, cluster Management Virtual IP, hardware BMC IP, out-of-band mNode IP; preferrably use Active Directory Certification Authority and DNS FQDNs rather than DIY OpenSSL stuff)
+  - Point Solidire and mNode NTP client to Windows ADS (primary and secondary) and if Internet is reachable from SolidFire management network, at least one public NTP server (public NTP servers may occasionally time out which is harmless)
+  - Create and upload valid TLS certificates to SolidFire cluster nodes (each node's management IP, cluster Management Virtual IP, hardware BMC IP, out-of-band mNode IP; preferably use Active Directory Certification Authority and DNS FQDNs rather than DIY OpenSSL stuff)
     - Sometimes it's suitable to keep infrastture management hosts on a separate network and subdomain (`Add-DnsServerPrimaryZone -Name infra.netapp.io`)
   - Add Windows Hyper-V (and other, if necessary) hosts' initiators to Initiators list and create one or more Volume Access Groups (VAGs). Then add initiators to appropriate VAGs if you plan to use VAGs and not CHAP (if you join ADS after you've done this, Windows Initiator Names will change so you'd have to re-do all SolidFire host IQNs and VAGs)
   - Create one low performance QoS policy for Quorum volume (e.g. Min 100, Max 500, Burst 1,000) and several other policies for regular workloads (Bronze, Silver, Gold)
@@ -192,7 +192,7 @@ Note that since SQL Server 2022 VSS hardware provider is no longer necessary for
 - Prepare Hyper-V for Windows Failover Clustering
   - Check firewall, DNS, AD configuration
   - Recheck adapter binding, IPv6, DNS, as it may look different after Virtual Switch and vEthernet adapter get added
-  - Enable and start iSCSI Intiator service
+  - Enable and start iSCSI Initiator service
   - Login iSCSI clients to Portal and connect to Quorum disk. On one Hyper-V host bring the disk online and create NTFS volume on it using default settings
 - Create Windows Failover Cluster
   - Validate configuration, especially DNS and firewall configuration
@@ -206,7 +206,7 @@ Note that since SQL Server 2022 VSS hardware provider is no longer necessary for
   - In the Failover Cluster GUI (assuming you use it to provide HA to VMs), add new cluster disk(s) and convert them to Cluster Shared Volumes
   - When deploying VMs, place them on a CSV or change Hyper-V defaults to make that happen automatically
 - [Optional] Install (out-of-band) SolidFire Management VM (use ISO to install) on Cluster Shared Storage. It can monitor SolidFire events and hardware and alert NetApp Support to problems, as well as give you actionable info via NetApp ActiveIQ analytics
-- [Optional] Install and configure NetApp OneCollect for scheduled gathering of sytem events and configuration changes. It can be extremely helpful in case of technical issues with the cluster
+- [Optional] Install and configure NetApp OneCollect for scheduled gathering of system events and configuration changes. It can be extremely helpful in case of technical issues with the cluster
 
 ## Hyper-V and Storage Administration
 
@@ -223,9 +223,10 @@ Note that since SQL Server 2022 VSS hardware provider is no longer necessary for
   - These VMs and Hyper-V can use different VLANs (Trunk Mode to VM switch, and access mode to Management OS and some VMs, for example)
   - Another consumer of iSCSI may be backup proxies, if backup software uses dedicated backup proxy VMs
 
-### Windows Admin Center
+### Windows Admin Center (WAC)
 
-- Currently there is no Admin Center plugin for SolidFire, but as highlighted above, frequent storage-side operations are fairly rare
+- Currently there is no Admin Center plugin for SolidFire, but as highlighted above, frequent storage-side operations are fairly rare.
+- In 2025 I built a WAC API gateway for SolidFire (see [here](https://github.com/scaleoutsean/solidfire-wac-gateway)) as well as a WAC Plugin that uses it (not published because WAC Plugin integration is a nightmare). But you may leverage SolidFire WAC Gateway for CLI or API access if you want
 - Note that Admin Center can add Hyper-V clusters and individual servers; you may want to add a Hyper-V cluster (which adds the members as well)
 - At this time, a Hyper-V storage management workflow in Windows Admin Center might look like this:
   - Prepare PowerShell scripts for operations you perform more frequently (e.g. Add, Remove, Resize, and Clone) and keep them on one or two Hyper-V hosts (or simply on Admin's network share)
