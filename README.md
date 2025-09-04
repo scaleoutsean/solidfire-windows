@@ -32,6 +32,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - [Storage-Based and Native Hyper-V Replication](#storage-based-and-native-hyper-v-replication)
     - [Switch (Failover) to SolidFire Cluster with Replica Volumes](#switch-failover-to-solidfire-cluster-with-replica-volumes)
     - [Using SolidFire Object Attributes](#using-solidfire-object-attributes)
+    - [Using enhanced RBAC](#using-enhanced-rbac)
   - [Microsoft Windows drivers for NetApp HCI Servers ("Compute Nodes")](#microsoft-windows-drivers-for-netapp-hci-servers-compute-nodes)
   - [Microsoft Windows on NetApp HCI Compute Nodes with RAID1 system volume](#microsoft-windows-on-netapp-hci-compute-nodes-with-raid1-system-volume)
   - [NetApp Active IQ OneCollect](#netapp-active-iq-onecollect)
@@ -310,6 +311,10 @@ foreach ($pair in $replicaPairs) {
 
 - Key SolidFire storage objects - such as Volumes and Snapshots - can have custom attributes in the form of KV pairs. NetApp Trident makes use of custom volume attributes
 - We can leverage this feature for management and reporting on Hyper-V as well (see Element API Reference Guide or awesome-solidfire repository for details on this)
+
+### Using enhanced RBAC
+
+- SolidFire's RBAC is limited. If you need enhanced RBAC and have some Windows programming skils, consider [SolidFire WAC Gateway](https://github.com/scaleoutsean/solidfire-wac-gateway)
 
 ## Microsoft Windows drivers for NetApp HCI Servers ("Compute Nodes")
 
