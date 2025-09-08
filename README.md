@@ -314,7 +314,7 @@ foreach ($pair in $replicaPairs) {
 
 ### Using enhanced RBAC
 
-- SolidFire's RBAC is limited. If you need enhanced RBAC and have some Windows programming skils, consider [SolidFire WAC Gateway](https://github.com/scaleoutsean/solidfire-wac-gateway)
+- SolidFire's RBAC is limited. If you need enhanced RBAC and have some Windows programming skils, consider [SolidFire WAC Gateway](https://github.com/scaleoutsean/solidfire-wac-gateway). There's a [PowerShell 7 module](https://github.com/scaleoutsean/solidfire-wac-gateway-client/) that goes with it, although SolidFire WAC Gateway can be used by any client (there's a Swagger/OpenAPI spec that makes that easy).
 
 ## Microsoft Windows drivers for NetApp HCI Servers ("Compute Nodes")
 
