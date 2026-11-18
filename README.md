@@ -6,7 +6,7 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
 
 - [solidfire-windows: Notes on Microsoft Windows with NetApp SolidFire](#solidfire-windows-notes-on-microsoft-windows-with-netapp-solidfire)
   - [General Notes](#general-notes)
-    - [Windows Server 2016, 2019, 2022, 2025](#windows-server-2016-2019-2022-2025)
+    - [Windows Server 2016, 2019, 2022, 2025, 2028](#windows-server-2016-2019-2022-2025-2028)
   - [Host and Guest Configuration Notes](#host-and-guest-configuration-notes)
     - [Networking](#networking)
     - [iSCSI](#iscsi)
@@ -62,11 +62,12 @@ For additional SolidFire-related information, please refer to [awesome-solidfire
     - Use one teamed interface with two vEthernet NICs for ManagementOS, set up one connection from each vEthernet interface's IP address
     - Use Windows Network Controller (available only in Windows Server [Datacenter Edition](https://docs.microsoft.com/en-us/windows-server/get-started-19/editions-comparison-19))
 
-### Windows Server 2016, 2019, 2022, 2025
+### Windows Server 2016, 2019, 2022, 2025, 2028
 
 - Windows Server 2016 and 2019 are officially supported.
 - Windows Server 2022 Preview Build 20303 with Hyper-V has been touch-tested with SolidFire 12.2. In terms of making use of SolidFire iSCSI targets, it does not seem different compared to Windows Server 2019. Containers/Kubernetes have not been tested.
-- Windows Server 2025 Preview Build 26085.1 - has been touch [tested](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html) with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise. Also [Build 26100.4061](https://scaleoutsean.github.io/2025/05/22/windows-2025-netapp-solidfire.html) (May 2025).
+- Windows Server 2025 Preview Build 26085.1 - has been touch-[tested](https://scaleoutsean.github.io/2024/03/31/windows-server-2025-with-solidfire-part-one.html) with SolidFire 12.5. Nothing odd has been observed iSCSI storage-wise. Also [Build 26100.4061](https://scaleoutsean.github.io/2025/05/22/windows-2025-netapp-solidfire.html) (May 2025).
+- Windows Server 2028 - a preview was touch-tested and found to work well. See [here](https://scaleoutsean.github.io/2026/11/18/windows-2028-preview-netapp-solidfire.html).
 
 ## Host and Guest Configuration Notes
 
